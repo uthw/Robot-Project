@@ -8,21 +8,28 @@
 #include <cmath>
 
 #define RIGHT_ON_LINE .620
-#define RIGHT_ON_BORDER .750 // The values for straight and curved are very different
+#define RIGHT_ON_BORDER .688 // The values for straight and curved are very different
 #define LEFT_ON_LINE .775
 #define LEFT_ON_BORDER 1.055
 #define MIDDLE_ON_LINE 1.45
-#define MIDDLE_ON_BORDER 1.25
+#define MIDDLE_ON_BORDER 1.46
 
 #define ON_LINE(val, target) (fabs((val - target) / target) < ERROR_THRESHOLD)
 #define ON_BORDER(val, target) (fabs((val - target) / target) < BORDER_THRESHOLD)
 
-#define MAX_SPEED 12
-#define MIN_SPEED 6
+#define MAX_SPEED 25
+#define MIN_SPEED 12
 #define LOW_BATTERY 3.0
 #define ERROR_THRESHOLD 0.2
 #define BORDER_THRESHOLD 0.35
 #define DIRECTION_TIME 0.01
+#define REQUIRED_CONSISTENT_READINGS 3
+
+enum State {
+    MIDDLE,
+    RIGHT,
+    LEFT
+};
 
 // Declarations for analog optosensors
 AnalogInputPin right_opto(FEHIO::P1_0);
@@ -36,8 +43,7 @@ void turnLeft();
 void goForward();
 float relativeError(float observed, float expected);
 float relativeError(float observed, float expected, FEHFile& file, float startTime);
-void debugSystem(FEHFile* file, float rightVal, float leftVal,
-    float middleVal, float startTime);
+void debugSystem(FEHFile* file, float rightVal, float leftVal, float middleVal, float startTime, int currentState);
 
 int main()
 {
@@ -48,12 +54,15 @@ int main()
     float middleVal = middle_opto.Value();
     float leftVal = left_opto.Value();
 
+    int consistentReadings = 0;
+    int lastState = -1;
+
     while (true) {
         rightVal = right_opto.Value();
         middleVal = middle_opto.Value();
         leftVal = left_opto.Value();
 
-        debugSystem(outfile, rightVal, middleVal, leftVal, startTime);
+        debugSystem(outfile, rightVal, middleVal, leftVal, startTime, lastState);
 
         // Check line conditions
         bool rightOnLine = ON_LINE(rightVal, RIGHT_ON_LINE);
@@ -64,22 +73,46 @@ int main()
         bool middleOnBorder = ON_BORDER(middleVal, MIDDLE_ON_BORDER);
         bool leftOnBorder = ON_BORDER(leftVal, LEFT_ON_BORDER);
 
+        int currentState = MIDDLE;
+
         // Determine motor actions based on sensor combinations
         if (middleOnLine) {
-            goForward();
-        } else if (leftOnLine || (leftOnBorder && !rightOnBorder)) {
-            turnLeft();
-        } else if (rightOnLine || (rightOnBorder && !leftOnBorder)) {
-            turnRight();
+            currentState = MIDDLE;
+        } else if (leftOnLine) {
+            currentState = LEFT;
+        } else if (rightOnLine) {
+            currentState = RIGHT;
         } else if (leftOnBorder && rightOnBorder) {
             // Both borders detected
-            goForward();
+            currentState = MIDDLE;
         } else {
             // No line detected :(
-            goForward();
+            currentState = MIDDLE;
         }
 
-        // Sleep(DIRECTION_TIME);
+        if (currentState == lastState) {
+            consistentReadings++;
+        } else {
+            consistentReadings = 0;
+        }
+
+        if (consistentReadings >= REQUIRED_CONSISTENT_READINGS) {
+            // Only change motor commands after consistent readings
+            switch (currentState) {
+            case MIDDLE:
+                goForward();
+                break;
+            case RIGHT:
+                turnLeft();
+                break;
+            case LEFT:
+                turnRight();
+                break;
+            }
+            lastState = currentState;
+        }
+
+        Sleep(DIRECTION_TIME);
     }
 }
 
@@ -121,8 +154,8 @@ float relativeError(float observed, float expected, FEHFile& file, float startTi
     return error;
 }
 
-void debugSystem(FEHFile* file, float rightVal, float leftVal,
-    float middleVal, float startTime)
+// Update function signature to include state parameter
+void debugSystem(FEHFile* file, float rightVal, float leftVal, float middleVal, float startTime, int currentState)
 {
     float elapsedTime = TimeNow() - startTime;
 
@@ -136,18 +169,22 @@ void debugSystem(FEHFile* file, float rightVal, float leftVal,
     LCD.Write("Left: ");
     LCD.WriteLine(leftVal);
 
-    // LCD.Write("\nState: ");
-    // switch (state) {
-    // case MIDDLE:
-    //     LCD.WriteLine("MIDDLE");
-    //     break;
-    // case RIGHT:
-    //     LCD.WriteLine("RIGHT");
-    //     break;
-    // case LEFT:
-    //     LCD.WriteLine("LEFT");
-    //     break;
-    // }
+    // Add state display
+    LCD.Write("\nState: ");
+    switch (currentState) {
+    case MIDDLE:
+        LCD.WriteLine("MIDDLE");
+        break;
+    case RIGHT:
+        LCD.WriteLine("RIGHT");
+        break;
+    case LEFT:
+        LCD.WriteLine("LEFT");
+        break;
+    default:
+        LCD.WriteLine("UNKNOWN");
+        break;
+    }
 
     float voltage = Battery.Voltage();
     LCD.Write("\nBattery: ");
@@ -156,9 +193,13 @@ void debugSystem(FEHFile* file, float rightVal, float leftVal,
         LCD.WriteLine("WARNING: Low Battery!");
     }
 
+    SD.FPrintf(file, "----------------------------------------\n");
     SD.FPrintf(file, "Time: %.2f seconds\n", elapsedTime);
-    SD.FPrintf(file, "Sensors (R/M/L): %f/%f/%f\n", rightVal, middleVal,
-        leftVal);
+    SD.FPrintf(file, "State: %s\n",
+        currentState == MIDDLE ? "MIDDLE" : currentState == RIGHT ? "RIGHT"
+            : currentState == LEFT                                ? "LEFT"
+                                                                  : "UNKNOWN");
+    SD.FPrintf(file, "Sensors (R/M/L): %f/%f/%f\n", rightVal, middleVal, leftVal);
     SD.FPrintf(file, "Battery: %f\n", voltage);
     SD.FPrintf(file, "----------------------------------------\n");
 
