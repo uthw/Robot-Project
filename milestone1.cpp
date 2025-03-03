@@ -130,6 +130,7 @@ int main()
     // Wait until touch to start the last part
     float x, y;
 
+    LCD.WriteLine("Waiting for touch to start ramp task");
     while (!LCD.Touch(&x, &y))
         ;
     while (LCD.Touch(&x, &y))
@@ -140,7 +141,7 @@ int main()
     Sleep(1.0);
 
     // Distance between bottom and top of ramp is 12.374 in, we will need more most likely, change this as we go
-    int rampDist = 15;
+    int rampDist = 25;
     goForward(motorSpeed, rampDist);
     Sleep(1.0);
     // Turn around
