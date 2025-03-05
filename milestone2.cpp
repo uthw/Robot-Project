@@ -118,4 +118,12 @@ int main()
 {
     LCD.Clear();
     while(IS_DARK(lightSensor.Value())){}
+
+    turnRight(25, 45);
+    goForward(40, 50);
+    turnRight(25, 45);
+        
+    // Find button
+    // Read color
+    // Press right button
 }
