@@ -5,7 +5,7 @@
 # Robot, firmware, build files
 fehproteusfirmware/
 NUL
-main.d
-main.o
+*.d
+*.o
 Makefile
 Proteus*
