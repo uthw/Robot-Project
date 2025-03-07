@@ -31,8 +31,15 @@ DigitalEncoder leftencoder(FEHIO::P0_1);
 FEHMotor rightmotor(FEHMotor::Motor0, 9.0);
 FEHMotor leftmotor(FEHMotor::Motor1, 9.0);
 
-#define DARK_THRESHOLD 2.5
+#define DARK_THRESHOLD 1.0
 #define IS_DARK(voltage) (voltage > DARK_THRESHOLD)
+
+// TODO: ADD THESE
+#define BLUE_THRESHOLD
+#define IS_BLUE(voltage) (false)
+
+#define RED_THRESHOLD
+#define IS_RED(voltage) (false)
 
 AnalogInputPin lightSensor(FEHIO::P1_0);
 
@@ -112,17 +119,46 @@ void goForward(int percent, int inches)
     rightmotor.Stop();
     leftmotor.Stop();
 }
+void goForwardUntilLight(int percent)
+{
+
+    rightmotor.SetPercent(percent);
+    leftmotor.SetPercent(percent + LEFT_MODIFIER);
+
+    while (IS_DARK(lightSensor.Value())) { }
+    rightmotor.SetPercent(0);
+    leftmotor.SetPercent(0);
+}
+void humidifier_button()
+{
+    if (IS_RED(lightSensor.Value())) {
+        turnLeft(25, 200);
+    } else if (IS_BLUE(lightSensor.Value())) {
+        turnRight(25, 200);
+    } else {
+        LCD.WriteLine("ERROR READING COLOR DURING HUMIDIFIER TASK");
+    }
+    goForward(30, 8);
+    goForward(-30, 10);
+}
 
 int main()
 {
     LCD.Clear();
-    while(IS_DARK(lightSensor.Value())){}
+    LCD.WriteLine("RUNNING");
+    while (IS_DARK(lightSensor.Value())) {
+        LCD.WriteLine(lightSensor.Value());
+    }
+
+    LCD.WriteLine("STARTING");
 
     turnRight(25, 45);
-    goForward(40, 50);
-    turnRight(25, 45);
-        
+    goForward(40, 41);
+    turnLeft(25, 90);
+
+    goForwardUntilLight(40);
+
     // Find button
     // Read color
-    // Press right button
+    // Press correct button
 }
