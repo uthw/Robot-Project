@@ -5,8 +5,14 @@
 #include "FEHIO.h"
 #include "FEHMotor.h"
 
-void turnRight(int percent, int degrees, FEHMotor leftmotor, FEHMotor rightmotor, DigitalEncoder leftencoder, DigitalEncoder rightencoder);
-void turnLeft(int percent, int degrees, FEHMotor leftmotor, FEHMotor rightmotor, DigitalEncoder leftencoder, DigitalEncoder rightencoder);
-void goForward(int percent, int inches, FEHMotor leftmotor, FEHMotor rightmotor, DigitalEncoder leftencoder, DigitalEncoder rightencoder);
+// extern DigitalEncoder rightencoder;
+// extern DigitalEncoder leftencoder;
+// extern FEHMotor rightmotor;
+// extern FEHMotor leftmotor;
+
+void turnRight(int percent, int degrees, DigitalEncoder leftencoder, DigitalEncoder rightencoder, FEHMotor leftmotor, FEHMotor rightmotor);
+void turnLeft(int percent, int degrees, DigitalEncoder leftencoder, DigitalEncoder rightencoder, FEHMotor leftmotor, FEHMotor rightmotor);
+void goForward(int percent, int inches, DigitalEncoder leftencoder, DigitalEncoder rightencoder, FEHMotor leftmotor, FEHMotor rightmotor);
+void goForwardHalfInches(int percent, int halfInches, DigitalEncoder leftencoder, DigitalEncoder rightencoder, FEHMotor leftmotor, FEHMotor rightmotor);
 
 #endif
