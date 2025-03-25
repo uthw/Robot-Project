@@ -1,2 +1,10 @@
 # macOS
 .DS_Store
+
+# ERC2
+erc2/.pio/
+erc2/.vscode/
+erc2/!.vscode/extensions.json
+erc2/lib/
+erc2/extra_script.py
+erc2/.gitmodules
