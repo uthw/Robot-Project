@@ -1,14 +1,15 @@
 #include <Arduino.h>
 #include <FEH.h>
-#include "motor_helpers.h"
+#include <FEHRCS.h>
+// #include "motor_helpers.h"
 #include "utils.h"
-
-// Declare things like Motors, Servos, etc. here
-// For example:
-// FEHMotor leftMotor(FEHMotor::Motor0, 6.0);
-// FEHServo servo(FEHServo::Servo0);
 
 void ERCMain()
 {
-    TestGUI();
+    Serial.begin(9600);
+    Serial.print("HELLO WORLD!");
+    while (true) {
+        DisplayBatteryPercent();
+        Sleep(0.2);
+    }
 }

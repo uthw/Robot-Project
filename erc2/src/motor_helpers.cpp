@@ -6,8 +6,8 @@ using namespace std;
 #include "utils.h"
 #include <math.h>
 
-DigitalEncoder rightEncoder(FEHIO::Pin0);
-DigitalEncoder leftEncoder(FEHIO::Pin1);
+DigitalEncoder rightEncoder(FEHIO::Pin9);
+DigitalEncoder leftEncoder(FEHIO::Pin10);
 FEHMotor rightMotor(FEHMotor::Motor0, 9.0);
 FEHMotor leftMotor(FEHMotor::Motor1, 9.0);
 

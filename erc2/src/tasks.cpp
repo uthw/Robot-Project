@@ -12,7 +12,7 @@
 #define RED_THRESHOLD_LOW 0.0
 #define IS_RED(voltage) (voltage > RED_THRESHOLD_LOW && voltage < RED_THRESHOLD_HIGH)
 
-AnalogInputPin lightSensor(FEHIO::Pin9); // It's like yellow red orange or something from screen to bottom
+AnalogInputPin lightSensor(FEHIO::Pin8); // It's like yellow red orange or something from screen to bottom
 
 // Detects the start light illuminating before continuing
 void detectStartDebug()

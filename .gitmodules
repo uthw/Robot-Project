@@ -1,0 +1,3 @@
+[submodule "erc2/lib"]
+	path = erc2/lib
+	url = https://code.osu.edu/fehelectronics/eed_controller/erc2firmware.git
