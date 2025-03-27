@@ -1,6 +1,9 @@
 # macOS
 .DS_Store
 
+# VS Code
+.vscode/
+
 # ERC2
 erc2/.pio/
 erc2/.vscode/
