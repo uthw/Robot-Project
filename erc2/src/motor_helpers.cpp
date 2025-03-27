@@ -6,8 +6,8 @@ using namespace std;
 #include "utils.h"
 #include <math.h>
 
-DigitalEncoder rightEncoder(FEHIO::Pin9);
-DigitalEncoder leftEncoder(FEHIO::Pin10);
+DigitalEncoder rightEncoder(FEHIO::Pin13);
+DigitalEncoder leftEncoder(FEHIO::Pin14);
 FEHMotor rightMotor(FEHMotor::Motor0, 9.0);
 FEHMotor leftMotor(FEHMotor::Motor1, 9.0);
 
@@ -19,8 +19,8 @@ FEHMotor leftMotor(FEHMotor::Motor1, 9.0);
 // Motors have less power as battery decreases
 #define ACTUAL_PERCENTAGE_POWER(percent) min((int)((MAX_VOLTAGE / Battery.Voltage()) * percent), 100)
 
-#define COUNTS_IN_90_DEGREES 200 // Old: 215
-#define COUNTS_IN_1_INCH 20 // Old: 32
+#define COUNTS_IN_90_DEGREES 223 // Old: 215
+#define COUNTS_IN_1_INCH 32 // Old: 32
 
 #define LEFT_MODIFIER 1 // Added to left motor speed. Set to 0 if it's going straight right now
 
@@ -39,8 +39,9 @@ void turnRight(int percent, int degrees)
     leftMotor.SetPercent(actualPercent + LEFT_MODIFIER);
 
     // Run motors until avg of left and right encoder equals counts
-    while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < counts)
-        ;
+    while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < counts) {
+        Sleep(0);
+    }
 
     // Turn off motors
     rightMotor.Stop();
@@ -62,8 +63,9 @@ void turnLeft(int percent, int degrees)
     leftMotor.SetPercent(actualPercent * -1);
 
     // Run motors until avg of left and right encoder equals counts
-    while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < counts)
-        ;
+    while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < counts) {
+        Sleep(0);
+    }
 
     // Turn off motors
     rightMotor.Stop();
@@ -87,8 +89,10 @@ void goForward(int percent, float inches)
     leftMotor.SetPercent(actualPercent + LEFT_MODIFIER);
 
     // Run motors until avg of left and right encoder equals counts
-    while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < counts)
-        ;
+    while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < counts) {
+        // For some reason empty while loops don't work on arduino. This is a workaround
+        Sleep(0);
+    }
 
     // Turn off motors
     rightMotor.Stop();
@@ -109,15 +113,16 @@ void goForwardTimed(int percent, float seconds)
     leftMotor.Stop();
 }
 
-void goForward(int percent) {
+void goForward(int percent)
+{
     int actualPercent = ACTUAL_PERCENTAGE_POWER(percent);
 
     rightMotor.SetPercent(actualPercent);
     leftMotor.SetPercent(actualPercent + LEFT_MODIFIER);
 }
 
-void stopMotors() {
+void stopMotors()
+{
     rightMotor.Stop();
     leftMotor.Stop();
 }
-
