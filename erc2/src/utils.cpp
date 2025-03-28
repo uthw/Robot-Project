@@ -4,6 +4,9 @@
 #define MAX_VOLTAGE 11.5 // Actually closer to 11.52-11.55
 #define EMPTY_VOLTAGE 9.0 // Estimated
 
+#define YMAX 240
+#define XMAX 320
+
 void DisplayBatteryPercent()
 {
     float voltage = Battery.Voltage();
