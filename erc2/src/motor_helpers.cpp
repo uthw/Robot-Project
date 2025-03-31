@@ -195,7 +195,7 @@ void MotorControlGUI()
     LCD.WriteLine("Touch a region:");
     LCD.WriteAt("Left", XMAX / 4, YMAX / 4); // left region
     LCD.WriteAt("Right", XMAX / 2 + 10, YMAX / 4); // right region
-    LCD.WriteAt("Forward", XMAX / 4 + 10, YMAX / 2 + 10); // bottom left(?) region
+    LCD.WriteAt("Forward", XMAX / 4 - 20, YMAX / 2 + 10); // bottom left(?) region
     LCD.WriteAt("Servo", XMAX / 2 + 10, YMAX / 2 + 10); // bottom right(?) region
 
     int x, y;
