@@ -1,12 +1,12 @@
-// This program can consistently complete milestone 4 with 23/20 points. Commented out code is untested but might allow us to earn the last 3 for only interacting with the correct lever. 
+// This program can consistently complete milestone 4 with 23/20 points. Commented out code is untested but might allow us to earn the last 3 for only interacting with the correct lever.
 // It shouldn't matter anymore, but battery was around 88% when it was tested.
 
+#include "motor_helpers.h"
+#include "tasks.h"
+#include "utils.h"
 #include <Arduino.h>
 #include <FEH.h>
 #include <FEHRCS.h>
-#include "motor_helpers.h"
-#include "utils.h"
-#include "tasks.h"
 
 FEHServo leverArm(FEHServo::Servo7); // black on top
 
@@ -18,8 +18,8 @@ void ERCMain()
     // while (true) {
     //     MotorControlGUI();
     // }
-    
-    // RCS.InitializeTouchMenu();
+
+    // RCS.InitializeTouchMenu(); // bonus experimental
     detectStart();
 
     // default (extending out towards robot) = ~165~ 120
@@ -47,7 +47,7 @@ void ERCMain()
     leverArm.SetDegree(140);
     Sleep(0.2);
 
-    // levers    
+    // levers
     goForward(-25, 4);
     leverArm.SetDegree(90);
     Sleep(0.2);

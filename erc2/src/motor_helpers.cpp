@@ -11,6 +11,8 @@ DigitalEncoder leftEncoder(FEHIO::Pin14);
 FEHMotor rightMotor(FEHMotor::Motor0, 9.0);
 FEHMotor leftMotor(FEHMotor::Motor1, 9.0);
 
+FEHServo leverArm2(FEHServo::Servo7); // black on top
+
 // Convert desired degrees to number of counts required to rotate said number of degrees
 #define DEGREES_TO_COUNTS(degrees) (int)(degrees * COUNTS_IN_90_DEGREES / 90)
 #define INCHES_TO_COUNTS(inches) (int)(inches * COUNTS_IN_1_INCH)
@@ -23,6 +25,8 @@ FEHMotor leftMotor(FEHMotor::Motor1, 9.0);
 #define COUNTS_IN_1_INCH 32 // Old: 32
 
 #define LEFT_MODIFIER 1 // Added to left motor speed. Set to 0 if it's going straight right now
+
+#define MOTOR_DOWNTIME 0.2 // Time in seconds motors stop after a drivetrain method is called
 
 void turnRight(int percent, int degrees)
 {
@@ -46,6 +50,7 @@ void turnRight(int percent, int degrees)
     // Turn off motors
     rightMotor.Stop();
     leftMotor.Stop();
+    Sleep(MOTOR_DOWNTIME);
 }
 
 void turnLeft(int percent, int degrees)
@@ -70,6 +75,7 @@ void turnLeft(int percent, int degrees)
     // Turn off motors
     rightMotor.Stop();
     leftMotor.Stop();
+    Sleep(MOTOR_DOWNTIME);
 }
 
 // Motors go forward at percent power for inches
@@ -97,6 +103,7 @@ void goForward(int percent, float inches)
     // Turn off motors
     rightMotor.Stop();
     leftMotor.Stop();
+    Sleep(MOTOR_DOWNTIME);
 }
 
 // Motors go forward at percent power for seconds
@@ -111,6 +118,7 @@ void goForwardTimed(int percent, float seconds)
 
     rightMotor.Stop();
     leftMotor.Stop();
+    Sleep(MOTOR_DOWNTIME);
 }
 
 void goForward(int percent)
@@ -125,6 +133,7 @@ void stopMotors()
 {
     rightMotor.Stop();
     leftMotor.Stop();
+    Sleep(MOTOR_DOWNTIME);
 }
 
 int getValueTouch(const char* message, int min, int max, int increment, int initialValue)
@@ -186,11 +195,12 @@ void MotorControlGUI()
     LCD.WriteLine("Touch a region:");
     LCD.WriteAt("Left", XMAX / 4, YMAX / 4); // left region
     LCD.WriteAt("Right", XMAX / 2 + 10, YMAX / 4); // right region
-    LCD.WriteAt("Forward", XMAX / 4 + 10, YMAX / 2 + 10); // bottom region
+    LCD.WriteAt("Forward", XMAX / 4 + 10, YMAX / 2 + 10); // bottom left(?) region
+    LCD.WriteAt("Servo", XMAX / 2 + 10, YMAX / 2 + 10); // bottom right(?) region
 
     int x, y;
 
-    LCD.DrawVerticalLine(XMAX / 2, 20, YMAX / 2); // goes halfway down
+    LCD.DrawVerticalLine(XMAX / 2, 20, YMAX); // goes halfway down
     LCD.DrawHorizontalLine(YMAX / 2, 0, XMAX); // goes all the way across
 
     // Wait for touch
@@ -198,15 +208,27 @@ void MotorControlGUI()
         Sleep(0.1);
     }
 
+    int motorPower = 25;
+
     // Determine which region was touched
     if (x < XMAX / 2 && y < YMAX / 2) { // Left
-        int deg = getValueTouch("Set degrees to turn left", 0, 360, 5, 90);
-        turnLeft(25, deg);
+        int deg = getValueTouch("Set degrees to turn left", 0, 360, 15, 90);
+        turnLeft(motorPower, deg);
     } else if (x >= XMAX / 2 && y < YMAX / 2) { // Right
-        int deg = getValueTouch("Set degrees to turn right", 0, 360, 5, 90);
-        turnRight(25, deg);
-    } else if (x < XMAX && y >= YMAX / 2) { // Forward
-        int inches = getValueTouch("Set inches to go forward", -60, 60, 1, 12);
-        goForward(25, inches);
+        int deg = getValueTouch("Set degrees to turn right", 0, 360, 15, 90);
+        turnRight(motorPower, deg);
+    } else if (x < XMAX / 2 && y >= YMAX / 2) { // Forward
+        int inches = getValueTouch("Set inches to go forward", -60, 60, 1, 6);
+
+        if (inches < 0) {
+            inches *= -1;
+            motorPower *= -1;
+        }
+        goForward(motorPower, inches);
+    } else if (x >= XMAX / 2 && y >= YMAX / 2) { // Servo
+        int angle = getValueTouch("Set servo angle", 0, 180, 5, 90);
+        leverArm2.SetMin(500);
+        leverArm2.SetMax(2500);
+        leverArm2.SetDegree(angle);
     }
 }

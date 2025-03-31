@@ -10,6 +10,7 @@ void turnLeft(int percent, int degrees);
 void goForward(int percent, float inches);
 void goForwardTimed(int percent, float seconds);
 void goForward(int percent);
+void goForward(int percent, float inches, float downtime);
 void stopMotors();
 int getValueTouch(char *message, int min, int max, int increment, int initialValue);
 void MotorControlGUI();
