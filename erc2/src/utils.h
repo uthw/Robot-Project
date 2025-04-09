@@ -8,7 +8,10 @@
 #define XMAX 320
 
 #define TOUCH_BUFFER 0.2
+#define READING_COUNT 200
 
 void DisplayBatteryPercent();
+float getVoltages(float* voltages, AnalogInputPin& sensor);
+float standardDeviationOfVoltages(float* voltages, float avg);
 
 #endif

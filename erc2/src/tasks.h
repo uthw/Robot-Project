@@ -5,5 +5,6 @@ void detectStartDebug();
 void detectStart();
 void goForwardUntilLight(int percent);
 void humidifier_button();
+void calibrateLightSensor();
 
 #endif

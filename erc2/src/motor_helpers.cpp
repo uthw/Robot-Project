@@ -6,17 +6,24 @@ using namespace std;
 #include "utils.h"
 #include <math.h>
 
-DigitalEncoder rightEncoder(FEHIO::Pin13);
-DigitalEncoder leftEncoder(FEHIO::Pin14);
-FEHMotor rightMotor(FEHMotor::Motor0, 9.0);
-FEHMotor leftMotor(FEHMotor::Motor1, 9.0);
+// All perspectives (r/m/l) are from the back of the robot
 
-FEHServo leverArm2(FEHServo::Servo7); // black on top
+DigitalEncoder rightEncoder(FEHIO::Pin13); // Encoder for the right Igwan motor
+DigitalEncoder leftEncoder(FEHIO::Pin14); // Encoder for the left Igwan motor
+FEHMotor rightMotor(FEHMotor::Motor0, 9.0); // Right Igwan motor
+FEHMotor leftMotor(FEHMotor::Motor1, 9.0); // Left Igwan motor
+FEHMotor composter(FEHMotor::Motor2, 5.0); // Composter motor
+
+FEHServo leverArm2(FEHServo::Servo7); // Fitec high torque servo that controls the arm. Black wire on top
+
+// Declarations for optosensors
+AnalogInputPin rightOpto(FEHIO::Pin2); // Right optosensor
+AnalogInputPin middleOpto(FEHIO::Pin1); // Middle optosensor
+AnalogInputPin leftOpto(FEHIO::Pin0); // Left optosensor
 
 // Convert desired degrees to number of counts required to rotate said number of degrees
 #define DEGREES_TO_COUNTS(degrees) (int)(degrees * COUNTS_IN_90_DEGREES / 90)
 #define INCHES_TO_COUNTS(inches) (int)(inches * COUNTS_IN_1_INCH)
-#define HALF_INCHES_TO_COUNTS(halfInches) (int)(halfInches * COUNTS_IN_1_INCH / 2)
 
 // Motors have less power as battery decreases
 #define ACTUAL_PERCENTAGE_POWER(percent) min((int)((MAX_VOLTAGE / Battery.Voltage()) * percent), 100)
@@ -27,6 +34,14 @@ FEHServo leverArm2(FEHServo::Servo7); // black on top
 #define LEFT_MODIFIER 1 // Added to left motor speed. Set to 0 if it's going straight right now
 
 #define MOTOR_DOWNTIME 0.2 // Time in seconds motors stop after a drivetrain method is called
+#define SERVO_ADJUSTMENT_INTERVAL 0.005 // Time in seconds between servo movements
+#define OPTOSENSOR_INTERVAL 0.005 // Time in seconds between optosensor readings
+
+#define LEVER_ARM_MIN 500
+#define LEVER_ARM_MAX 2500
+#define LEVER_ARM_DEFAULT 120
+
+int lastDegree = LEVER_ARM_DEFAULT;
 
 void turnRight(int percent, int degrees)
 {
@@ -136,6 +151,16 @@ void stopMotors()
     Sleep(MOTOR_DOWNTIME);
 }
 
+void goBackward(int percent, float inches)
+{
+    goForward(percent * -1, inches);
+}
+
+void goBackward(int percent)
+{
+    goForward(percent * -1);
+}
+
 int getValueTouch(const char* message, int min, int max, int increment, int initialValue)
 {
     LCD.Clear();
@@ -187,16 +212,79 @@ int getValueTouch(const char* message, int min, int max, int increment, int init
     }
 }
 
-// GUI for manually controlling motors
-void MotorControlGUI()
+float getOptoReading(AnalogInputPin& opto, int samples)
+{
+    float sum = 0;
+    for (int i = 0; i < samples; i++) {
+        sum += opto.Value();
+        Sleep(OPTOSENSOR_INTERVAL);
+    }
+    return sum / samples;
+}
+
+void calibrateOptosensors()
+{
+    LCD.Clear();
+    // Black line
+    LCD.WriteLine("Place LEFT sensor over BLACK line and touch the screen");
+    LCD.WaitForTouchToStart();
+    Sleep(TOUCH_BUFFER);
+    float avgBlack = getOptoReading(leftOpto, 10);
+}
+
+// Gradually moves the lever arm to the desired degree, one degree per SERVO_ADJUSTMENT_INTERVAL seconds. Moving the servo too fast might be helping it fall off
+void setLeverArmDegree(int degree)
+{
+    leverArm2.SetMin(LEVER_ARM_MIN);
+    leverArm2.SetMax(LEVER_ARM_MAX);
+    int increment = degree > lastDegree ? 1 : -1;
+    for (int i = lastDegree; i != degree; i += increment) {
+        leverArm2.SetDegree(i);
+        Sleep(SERVO_ADJUSTMENT_INTERVAL);
+    }
+    lastDegree = degree;
+    Sleep(MOTOR_DOWNTIME);
+}
+
+// Instantly sets the lever arm to the desired degree. This exists so we don't have to set min and max in the main method; it does the same thing as leverArm.SetDegree
+void setLeverArmDegreeInstant(int degree)
+{
+    leverArm2.SetMin(LEVER_ARM_MIN);
+    leverArm2.SetMax(LEVER_ARM_MAX);
+    leverArm2.SetDegree(degree);
+    lastDegree = degree;
+    Sleep(MOTOR_DOWNTIME);
+}
+
+void turnComposter(int percent) {
+    int actualPercent = ACTUAL_PERCENTAGE_POWER(percent);
+    composter.SetPercent(actualPercent);
+}
+
+void stopComposter() {
+    composter.Stop();
+    Sleep(MOTOR_DOWNTIME);
+}
+
+void turnComposter(int percent, float seconds) {
+    int actualPercent = ACTUAL_PERCENTAGE_POWER(percent);
+    composter.SetPercent(actualPercent);
+    Sleep(seconds);
+    composter.Stop();
+    Sleep(MOTOR_DOWNTIME);
+}
+
+// Touch GUI for manually controlling motors. It exits after a command is given, so wrap it in a while (true) to keep doing it
+void motorControlGUI()
 {
     LCD.Clear();
     LCD.SetFontColor(WHITE);
     LCD.WriteLine("Touch a region:");
     LCD.WriteAt("Left", XMAX / 4, YMAX / 4); // left region
     LCD.WriteAt("Right", XMAX / 2 + 10, YMAX / 4); // right region
-    LCD.WriteAt("Forward", XMAX / 4 - 20, YMAX / 2 + 10); // bottom left(?) region
-    LCD.WriteAt("Servo", XMAX / 2 + 10, YMAX / 2 + 10); // bottom right(?) region
+    LCD.WriteAt("Forward", XMAX / 4 - 20, YMAX / 2 + 10); // bottom left region
+    LCD.WriteAt("LevArm", XMAX / 2 + 10, YMAX / 2 + 10); // top part of bottom right region
+    LCD.WriteAt("Compost", XMAX / 2 + 10, YMAX * 0.75 - 20); // bottom part of bottom right region
 
     int x, y;
 
@@ -225,10 +313,18 @@ void MotorControlGUI()
             motorPower *= -1;
         }
         goForward(motorPower, inches);
-    } else if (x >= XMAX / 2 && y >= YMAX / 2) { // Servo
-        int angle = getValueTouch("Set servo angle", 0, 180, 5, 90);
-        leverArm2.SetMin(500);
-        leverArm2.SetMax(2500);
-        leverArm2.SetDegree(angle);
+    } else if (x >= XMAX / 2 && y >= YMAX / 2) { // Servos
+        if (y < YMAX * 0.75) { // Lever arm
+            int angle = getValueTouch("Set servo angle", 0, 180, 5, 90);
+            setLeverArmDegree(angle);
+        } else if (y >= YMAX * 0.75) { // Compost mechanism
+            int power = getValueTouch("Set composter power", -100, 100, 5, 25);
+            turnComposter(power);
+            LCD.WriteLine("Touch to stop composter");
+            LCD.WaitForTouchToStart();
+            Sleep(TOUCH_BUFFER);
+            stopComposter();
+        }
     }
 }
+

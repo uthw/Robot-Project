@@ -1,5 +1,5 @@
-#include <FEHBattery.h>
-#include <FEHLCD.h>
+
+#include <FEH.h>
 
 // Clears LCD and writes battery percentage
 void WriteBatteryPercent()
