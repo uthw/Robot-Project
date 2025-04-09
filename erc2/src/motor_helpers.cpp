@@ -3,12 +3,13 @@ using namespace std;
 #include <FEHIO.h>
 #include <FEHMotor.h>
 // Cmath and algorithm have been killed by ERC2
+#include "motor_helpers.h"
 #include "utils.h"
 #include <math.h>
 
 // All perspectives (r/m/l) are from the back of the robot
 
-DigitalEncoder rightEncoder(FEHIO::Pin13); // Encoder for the right Igwan motor
+DigitalEncoder rightEncoder(FEHIO::Pin12); // Encoder for the right Igwan motor
 DigitalEncoder leftEncoder(FEHIO::Pin14); // Encoder for the left Igwan motor
 FEHMotor rightMotor(FEHMotor::Motor0, 9.0); // Right Igwan motor
 FEHMotor leftMotor(FEHMotor::Motor1, 9.0); // Left Igwan motor
@@ -17,9 +18,7 @@ FEHMotor composter(FEHMotor::Motor2, 5.0); // Composter motor
 FEHServo leverArm2(FEHServo::Servo7); // Fitec high torque servo that controls the arm. Black wire on top
 
 // Declarations for optosensors
-AnalogInputPin rightOpto(FEHIO::Pin2); // Right optosensor
-AnalogInputPin middleOpto(FEHIO::Pin1); // Middle optosensor
-AnalogInputPin leftOpto(FEHIO::Pin0); // Left optosensor
+AnalogInputPin middleOpto(FEHIO::Pin0); // Middle optosensor
 
 // Convert desired degrees to number of counts required to rotate said number of degrees
 #define DEGREES_TO_COUNTS(degrees) (int)(degrees * COUNTS_IN_90_DEGREES / 90)
@@ -32,16 +31,29 @@ AnalogInputPin leftOpto(FEHIO::Pin0); // Left optosensor
 #define COUNTS_IN_1_INCH 32 // Old: 32
 
 #define LEFT_MODIFIER 1 // Added to left motor speed. Set to 0 if it's going straight right now
+#define MOTOR_FACTOR -1 // Used to reverse the direction of the motors. Set to -1 if the motors are going in the wrong direction
 
 #define MOTOR_DOWNTIME 0.2 // Time in seconds motors stop after a drivetrain method is called
 #define SERVO_ADJUSTMENT_INTERVAL 0.005 // Time in seconds between servo movements
-#define OPTOSENSOR_INTERVAL 0.005 // Time in seconds between optosensor readings
+#define OPTOSENSOR_INTERVAL 0.05 // Time in seconds between optosensor readings
 
 #define LEVER_ARM_MIN 500
 #define LEVER_ARM_MAX 2500
 #define LEVER_ARM_DEFAULT 120
 
 int lastDegree = LEVER_ARM_DEFAULT;
+
+void writeDebugMotor()
+{
+    LCD.SetFontColor(BLACK);
+    LCD.DrawRectangle(0, YMAX / 2, XMAX, YMAX);
+    Sleep(0.2);
+    LCD.SetFontColor(WHITE);
+    LCD.WriteAt("left counts: ", 0, YMAX / 2);
+    LCD.WriteLine(leftEncoder.Counts());
+    LCD.WriteAt("right counts: ", 0, YMAX / 2 + 20);
+    LCD.WriteLine(rightEncoder.Counts());
+}
 
 void turnRight(int percent, int degrees)
 {
@@ -53,12 +65,19 @@ void turnRight(int percent, int degrees)
     rightEncoder.ResetCounts();
     leftEncoder.ResetCounts();
 
+    // Debug info
+    LCD.Write("actualPercent: ");
+    LCD.WriteLine(actualPercent);
+    LCD.Write("counts: ");
+    LCD.WriteLine(counts);
+
     // Set motors to desired percent
-    rightMotor.SetPercent(actualPercent * -1);
-    leftMotor.SetPercent(actualPercent + LEFT_MODIFIER);
+    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent * -1);
+    leftMotor.SetPercent(MOTOR_FACTOR * actualPercent + LEFT_MODIFIER);
 
     // Run motors until avg of left and right encoder equals counts
     while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < counts) {
+        writeDebugMotor();
         Sleep(0);
     }
 
@@ -79,11 +98,18 @@ void turnLeft(int percent, int degrees)
     leftEncoder.ResetCounts();
 
     // Set motors to desired percent
-    rightMotor.SetPercent(actualPercent + LEFT_MODIFIER);
-    leftMotor.SetPercent(actualPercent * -1);
+    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent + LEFT_MODIFIER);
+    leftMotor.SetPercent(MOTOR_FACTOR * actualPercent * -1);
+
+    // Debug info
+    LCD.Write("actualPercent: ");
+    LCD.WriteLine(actualPercent);
+    LCD.Write("counts: ");
+    LCD.WriteLine(counts);
 
     // Run motors until avg of left and right encoder equals counts
     while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < counts) {
+        writeDebugMotor();
         Sleep(0);
     }
 
@@ -106,12 +132,19 @@ void goForward(int percent, float inches)
     leftEncoder.ResetCounts();
 
     // Set motors to desired percent
-    rightMotor.SetPercent(actualPercent);
-    leftMotor.SetPercent(actualPercent + LEFT_MODIFIER);
+    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent);
+    leftMotor.SetPercent(MOTOR_FACTOR * actualPercent + LEFT_MODIFIER);
+
+    // Debug info
+    LCD.Write("actualPercent: ");
+    LCD.WriteLine(actualPercent);
+    LCD.Write("counts: ");
+    LCD.WriteLine(counts);
 
     // Run motors until avg of left and right encoder equals counts
     while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < counts) {
         // For some reason empty while loops don't work on arduino. This is a workaround
+        // writeDebugMotor();
         Sleep(0);
     }
 
@@ -126,8 +159,8 @@ void goForwardTimed(int percent, float seconds)
 {
     int actualPercent = ACTUAL_PERCENTAGE_POWER(percent);
 
-    rightMotor.SetPercent(actualPercent);
-    leftMotor.SetPercent(actualPercent + LEFT_MODIFIER);
+    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent);
+    leftMotor.SetPercent(MOTOR_FACTOR * actualPercent + LEFT_MODIFIER);
 
     Sleep(seconds);
 
@@ -140,10 +173,15 @@ void goForward(int percent)
 {
     int actualPercent = ACTUAL_PERCENTAGE_POWER(percent);
 
-    rightMotor.SetPercent(actualPercent);
-    leftMotor.SetPercent(actualPercent + LEFT_MODIFIER);
+    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent);
+    leftMotor.SetPercent(MOTOR_FACTOR * actualPercent + LEFT_MODIFIER);
 }
 
+void goForward(int percent, float inches, float downtime)
+{
+    goForward(percent, inches);
+    Sleep(downtime - 0.2);
+}
 void stopMotors()
 {
     rightMotor.Stop();
@@ -212,6 +250,7 @@ int getValueTouch(const char* message, int min, int max, int increment, int init
     }
 }
 
+// Takes a number of readings from the optosensor and returns the average
 float getOptoReading(AnalogInputPin& opto, int samples)
 {
     float sum = 0;
@@ -222,14 +261,44 @@ float getOptoReading(AnalogInputPin& opto, int samples)
     return sum / samples;
 }
 
+// Takes 4 readings of the middle optosensor and shows the average reflectiveness on screen
+// The readings are for on black line, off black line, on blue line, and off blue line
 void calibrateOptosensors()
 {
     LCD.Clear();
     // Black line
-    LCD.WriteLine("Place LEFT sensor over BLACK line and touch the screen");
+    LCD.WriteLine("Place middle sensor on black line and touch the screen");
     LCD.WaitForTouchToStart();
     Sleep(TOUCH_BUFFER);
-    float avgBlack = getOptoReading(leftOpto, 10);
+    float avgBlack = getOptoReading(middleOpto, 10);
+    LCD.WriteLine("Place middle sensor completely off black line and touch the screen");
+    LCD.WaitForTouchToStart();
+    Sleep(TOUCH_BUFFER);
+    float avgOffBlack = getOptoReading(middleOpto, 10);
+
+    LCD.Clear();
+
+    LCD.WriteLine("Place middle sensor on blue line and touch the screen");
+    LCD.WaitForTouchToStart();
+    Sleep(TOUCH_BUFFER);
+    float avgBlue = getOptoReading(middleOpto, 10);
+    LCD.WriteLine("Place middle sensor completely off blue line and touch the screen");
+    LCD.WaitForTouchToStart();
+    Sleep(TOUCH_BUFFER);
+    float avgOffBlue = getOptoReading(middleOpto, 10);
+    LCD.Clear();
+    LCD.Write("On black line: ");
+    LCD.WriteLine(avgBlack);
+    LCD.Write("Off black line: ");
+    LCD.WriteLine(avgOffBlack);
+    LCD.Write("On blue line: ");
+    LCD.WriteLine(avgBlue);
+    LCD.Write("Off blue line: ");
+    LCD.WriteLine(avgOffBlue);
+    LCD.WriteLine("Touch to continue");
+    LCD.WaitForTouchToStart();
+    Sleep(TOUCH_BUFFER);
+    LCD.Clear();    
 }
 
 // Gradually moves the lever arm to the desired degree, one degree per SERVO_ADJUSTMENT_INTERVAL seconds. Moving the servo too fast might be helping it fall off
@@ -256,17 +325,23 @@ void setLeverArmDegreeInstant(int degree)
     Sleep(MOTOR_DOWNTIME);
 }
 
-void turnComposter(int percent) {
+// Turns the composter servo at the desired percent power until stopComposter is called
+void turnComposter(int percent)
+{
     int actualPercent = ACTUAL_PERCENTAGE_POWER(percent);
     composter.SetPercent(actualPercent);
 }
 
-void stopComposter() {
+// Stops the composter servo
+void stopComposter()
+{
     composter.Stop();
     Sleep(MOTOR_DOWNTIME);
 }
 
-void turnComposter(int percent, float seconds) {
+// Turns the composter servo at the desired percent power and then stops it after the desired number of seconds
+void turnComposter(int percent, float seconds)
+{
     int actualPercent = ACTUAL_PERCENTAGE_POWER(percent);
     composter.SetPercent(actualPercent);
     Sleep(seconds);
@@ -283,13 +358,14 @@ void motorControlGUI()
     LCD.WriteAt("Left", XMAX / 4, YMAX / 4); // left region
     LCD.WriteAt("Right", XMAX / 2 + 10, YMAX / 4); // right region
     LCD.WriteAt("Forward", XMAX / 4 - 20, YMAX / 2 + 10); // bottom left region
-    LCD.WriteAt("LevArm", XMAX / 2 + 10, YMAX / 2 + 10); // top part of bottom right region
-    LCD.WriteAt("Compost", XMAX / 2 + 10, YMAX * 0.75 - 20); // bottom part of bottom right region
+    LCD.WriteAt("Arm", XMAX / 2 + 10, YMAX / 2 + 10); // top part of bottom right region
+    LCD.WriteAt("Compost", XMAX / 2 + 10, YMAX * 0.75 + 20); // bottom part of bottom right region
 
     int x, y;
 
     LCD.DrawVerticalLine(XMAX / 2, 20, YMAX); // goes halfway down
     LCD.DrawHorizontalLine(YMAX / 2, 0, XMAX); // goes all the way across
+    LCD.DrawHorizontalLine(YMAX * 0.75, XMAX / 2, XMAX);
 
     // Wait for touch
     while (!LCD.Touch(&x, &y)) {
@@ -300,10 +376,10 @@ void motorControlGUI()
 
     // Determine which region was touched
     if (x < XMAX / 2 && y < YMAX / 2) { // Left
-        int deg = getValueTouch("Set degrees to turn left", 0, 360, 15, 90);
+        int deg = getValueTouch("Set degrees to turn left", 0, 360, 5, 90);
         turnLeft(motorPower, deg);
     } else if (x >= XMAX / 2 && y < YMAX / 2) { // Right
-        int deg = getValueTouch("Set degrees to turn right", 0, 360, 15, 90);
+        int deg = getValueTouch("Set degrees to turn right", 0, 360, 5, 90);
         turnRight(motorPower, deg);
     } else if (x < XMAX / 2 && y >= YMAX / 2) { // Forward
         int inches = getValueTouch("Set inches to go forward", -60, 60, 1, 6);
@@ -318,7 +394,7 @@ void motorControlGUI()
             int angle = getValueTouch("Set servo angle", 0, 180, 5, 90);
             setLeverArmDegree(angle);
         } else if (y >= YMAX * 0.75) { // Compost mechanism
-            int power = getValueTouch("Set composter power", -100, 100, 5, 25);
+            int power = getValueTouch("Set composter power", -100, 100, 25, 75);
             turnComposter(power);
             LCD.WriteLine("Touch to stop composter");
             LCD.WaitForTouchToStart();
@@ -327,4 +403,3 @@ void motorControlGUI()
         }
     }
 }
-

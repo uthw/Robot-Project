@@ -23,7 +23,7 @@
 #define IS_RED(voltage) (voltage > RED_AVG - RED_TOLERANCE && voltage < RED_AVG + RED_TOLERANCE)
 
 
-AnalogInputPin lightSensor(FEHIO::Pin8); // It's like yellow red orange or something from screen to bottom
+AnalogInputPin lightSensor(FEHIO::Pin8); // Red yellow orange from screen to battery
 
 // Detects the start light illuminating before continuing
 void detectStartDebug()
