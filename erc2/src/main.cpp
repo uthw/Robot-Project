@@ -17,7 +17,7 @@ void ERCMain()
     detectStart();
 
     // Compost bin
-    goBackward(25, 2);
+    goForward(25, 2);
     turnRight(25, 45);
     goForward(25, 6);
     turnComposter(75, 5); // Turn composter
