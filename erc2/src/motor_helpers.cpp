@@ -43,6 +43,7 @@ AnalogInputPin middleOpto(FEHIO::Pin0); // Middle optosensor
 
 int lastDegree = LEVER_ARM_DEFAULT;
 
+// Writes encoder counts to the bottom half of the screen with a 0.2 second timeout, which can be useful for seeing which one is disconnected, if any
 void writeDebugMotor()
 {
     LCD.SetFontColor(BLACK);
@@ -55,6 +56,11 @@ void writeDebugMotor()
     LCD.WriteLine(rightEncoder.Counts());
 }
 
+// Runs the right motor at -power and left motor at power to have the robot turn right in place.
+// @param percent
+//      percentage of power to run the motors at
+// @param degrees
+//      degrees to turn
 void turnRight(int percent, int degrees)
 {
     // Convert degrees to counts
@@ -77,7 +83,7 @@ void turnRight(int percent, int degrees)
 
     // Run motors until avg of left and right encoder equals counts
     while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < counts) {
-        writeDebugMotor();
+        // writeDebugMotor();
         Sleep(0);
     }
 
@@ -87,6 +93,11 @@ void turnRight(int percent, int degrees)
     Sleep(MOTOR_DOWNTIME);
 }
 
+// Runs the right motor at a power and left motor at -power to have the robot turn left in place.
+// @param percent
+//      percentage of power to run the motors at
+// @param degrees
+//      degrees to turn
 void turnLeft(int percent, int degrees)
 {
     // Convert degrees to counts
@@ -109,7 +120,7 @@ void turnLeft(int percent, int degrees)
 
     // Run motors until avg of left and right encoder equals counts
     while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < counts) {
-        writeDebugMotor();
+        // writeDebugMotor();
         Sleep(0);
     }
 
@@ -154,7 +165,7 @@ void goForward(int percent, float inches)
     Sleep(MOTOR_DOWNTIME);
 }
 
-// Motors go forward at percent power for seconds
+// Motors go forward at percent power for seconds before stopping
 void goForwardTimed(int percent, float seconds)
 {
     int actualPercent = ACTUAL_PERCENTAGE_POWER(percent);
@@ -169,6 +180,7 @@ void goForwardTimed(int percent, float seconds)
     Sleep(MOTOR_DOWNTIME);
 }
 
+// Motors go forward. They won't stop until you call a timed/distance based version of goForward or stopMotors()
 void goForward(int percent)
 {
     int actualPercent = ACTUAL_PERCENTAGE_POWER(percent);
@@ -177,11 +189,13 @@ void goForward(int percent)
     leftMotor.SetPercent(MOTOR_FACTOR * actualPercent + LEFT_MODIFIER);
 }
 
+// Overload of goForward that allows to customize the downtime
 void goForward(int percent, float inches, float downtime)
 {
     goForward(percent, inches);
-    Sleep(downtime - 0.2);
+    Sleep(downtime - MOTOR_DOWNTIME);
 }
+
 void stopMotors()
 {
     rightMotor.Stop();
