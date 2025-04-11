@@ -27,10 +27,10 @@ AnalogInputPin middleOpto(FEHIO::Pin0); // Middle optosensor
 // Motors have less power as battery decreases
 #define ACTUAL_PERCENTAGE_POWER(percent) min((int)((MAX_VOLTAGE / Battery.Voltage()) * percent), 100)
 
-#define COUNTS_IN_90_DEGREES 223 // Old: 215
+#define COUNTS_IN_90_DEGREES 225 // Old: 215
 #define COUNTS_IN_1_INCH 32 // Old: 32
 
-#define LEFT_MODIFIER 1 // Added to left motor speed. Set to 0 if it's going straight right now
+#define LEFT_MODIFIER 0 // Added to left motor speed. Set to 0 if it's going straight right now
 #define MOTOR_FACTOR -1 // Used to reverse the direction of the motors. Set to -1 if the motors are going in the wrong direction
 
 #define MOTOR_DOWNTIME 0.2 // Time in seconds motors stop after a drivetrain method is called
@@ -44,6 +44,7 @@ AnalogInputPin middleOpto(FEHIO::Pin0); // Middle optosensor
 int lastDegree = LEVER_ARM_DEFAULT;
 
 // Writes encoder counts to the bottom half of the screen with a 0.2 second timeout, which can be useful for seeing which one is disconnected, if any
+// TODO add adjusted percent and battery lvl to the display
 void writeDebugMotor()
 {
     LCD.SetFontColor(BLACK);
@@ -70,12 +71,6 @@ void turnRight(int percent, int degrees)
     // Reset counts
     rightEncoder.ResetCounts();
     leftEncoder.ResetCounts();
-
-    // Debug info
-    LCD.Write("actualPercent: ");
-    LCD.WriteLine(actualPercent);
-    LCD.Write("counts: ");
-    LCD.WriteLine(counts);
 
     // Set motors to desired percent
     rightMotor.SetPercent(MOTOR_FACTOR * actualPercent * -1);
@@ -112,12 +107,6 @@ void turnLeft(int percent, int degrees)
     rightMotor.SetPercent(MOTOR_FACTOR * actualPercent + LEFT_MODIFIER);
     leftMotor.SetPercent(MOTOR_FACTOR * actualPercent * -1);
 
-    // Debug info
-    LCD.Write("actualPercent: ");
-    LCD.WriteLine(actualPercent);
-    LCD.Write("counts: ");
-    LCD.WriteLine(counts);
-
     // Run motors until avg of left and right encoder equals counts
     while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < counts) {
         // writeDebugMotor();
@@ -145,12 +134,6 @@ void goForward(int percent, float inches)
     // Set motors to desired percent
     rightMotor.SetPercent(MOTOR_FACTOR * actualPercent);
     leftMotor.SetPercent(MOTOR_FACTOR * actualPercent + LEFT_MODIFIER);
-
-    // Debug info
-    LCD.Write("actualPercent: ");
-    LCD.WriteLine(actualPercent);
-    LCD.Write("counts: ");
-    LCD.WriteLine(counts);
 
     // Run motors until avg of left and right encoder equals counts
     while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < counts) {

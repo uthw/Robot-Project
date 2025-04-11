@@ -1,6 +1,6 @@
+#include <FEH.h>
 #include <FEHLCD.h>
 #include <FEHUtility.h>
-#include <FEH.h>
 
 #define MAX_VOLTAGE 11.5 // Actually closer to 11.52-11.55
 #define EMPTY_VOLTAGE 9.0 // Estimated
@@ -8,8 +8,10 @@
 #define YMAX 240
 #define XMAX 320
 
-#define READING_COUNT 200 // Max value due to memory constraints: ~1500
+#define READING_COUNT 100 // Max value due to memory constraints: ~1500
 #define READING_INTERVAL 0.05 // Time in seconds between readings
+
+#define TOUCH_BUFFER 0.2
 
 // Clears the screen and displays the battery percentage
 void DisplayBatteryPercent()
@@ -35,10 +37,9 @@ void DisplayBatteryPercent()
 // @param sensor
 //      AnalogInputPin to read from
 // @return average of readings
-float getVoltages(float* voltages, AnalogInputPin& sensor)
-{ // IDK if the * is gonna work
+float getVoltages(float* voltages, AnalogInputPin& sensor, int len)
+{
     float sum = 0;
-    int len = sizeof(voltages) / sizeof(voltages[0]);
 
     for (int i = 0; i < len; i++) {
         voltages[i] = sensor.Value();
@@ -47,6 +48,8 @@ float getVoltages(float* voltages, AnalogInputPin& sensor)
     }
 
     float average = sum / len;
+
+    LCD.WriteLine(average);
 
     return average;
 }
@@ -57,13 +60,27 @@ float getVoltages(float* voltages, AnalogInputPin& sensor)
 // @param avg
 //      average of voltages
 // @return standard deviation of voltages
-float standardDeviationOfVoltages(float* voltages, float avg)
+float standardDeviationOfVoltages(float* voltages, float avg, int len)
 {
-    int len = sizeof(voltages) / sizeof(voltages[0]);
     float stddev = 0;
+
     for (int i = 0; i < len; i++) {
-        stddev += (voltages[i] - avg) * (voltages[i] - avg); // sigma of (x - mu)^2
+        float diff = voltages[i] - avg;
+        stddev += diff * diff;
     }
-    stddev = sqrt(stddev / len); // sqrt(sigma / N)
+
+    stddev = sqrt(stddev / len);
+
     return stddev;
+}
+
+// Clears the screen, shows a message, and waits for touch to continue
+// @param message
+//      a message to display
+void waitForTouch(const char* message)
+{
+    LCD.Clear();
+    LCD.WriteLine(message);
+    LCD.WaitForTouchToStart();
+    Sleep(TOUCH_BUFFER);
 }
