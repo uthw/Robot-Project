@@ -17,6 +17,8 @@ FEHMotor composter(FEHMotor::Motor2, 5.0); // Composter motor
 
 FEHServo leverArm2(FEHServo::Servo7); // Fitec high torque servo that controls the arm. Black wire on top
 
+DigitalInputPin bumpSwitch(FEHIO::Pin6); // Bump switch on the back of the robot
+
 // Declarations for optosensors
 AnalogInputPin middleOpto(FEHIO::Pin0); // Middle optosensor
 
@@ -31,7 +33,8 @@ AnalogInputPin middleOpto(FEHIO::Pin0); // Middle optosensor
 #define COUNTS_IN_1_INCH 32 // Old: 32
 
 #define LEFT_MODIFIER 0 // Added to left motor speed. Set to 0 if it's going straight right now
-#define MOTOR_FACTOR -1 // Used to reverse the direction of the motors. Set to -1 if the motors are going in the wrong direction
+#define MOTOR_FACTOR 1 // Used to reverse the direction of the motors. Set to -1 if the motors are going in the wrong direction
+#define RIGHT_FACTOR -1 // Applied to right motor
 
 #define MOTOR_DOWNTIME 0.2 // Time in seconds motors stop after a drivetrain method is called
 #define SERVO_ADJUSTMENT_INTERVAL 0.005 // Time in seconds between servo movements
@@ -42,6 +45,11 @@ AnalogInputPin middleOpto(FEHIO::Pin0); // Middle optosensor
 #define LEVER_ARM_DEFAULT 120
 
 int lastDegree = LEVER_ARM_DEFAULT;
+
+enum bumpSwitchState {
+    NOT_ENGAGED = 1,
+    ENGAGED = 0
+};
 
 // Writes encoder counts to the bottom half of the screen with a 0.2 second timeout, which can be useful for seeing which one is disconnected, if any
 // TODO add adjusted percent and battery lvl to the display
@@ -73,7 +81,7 @@ void turnRight(int percent, int degrees)
     leftEncoder.ResetCounts();
 
     // Set motors to desired percent
-    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent * -1);
+    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent * -1 * RIGHT_FACTOR);
     leftMotor.SetPercent(MOTOR_FACTOR * actualPercent + LEFT_MODIFIER);
 
     // Run motors until avg of left and right encoder equals counts
@@ -104,7 +112,7 @@ void turnLeft(int percent, int degrees)
     leftEncoder.ResetCounts();
 
     // Set motors to desired percent
-    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent + LEFT_MODIFIER);
+    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent * RIGHT_FACTOR);
     leftMotor.SetPercent(MOTOR_FACTOR * actualPercent * -1);
 
     // Run motors until avg of left and right encoder equals counts
@@ -132,7 +140,7 @@ void goForward(int percent, float inches)
     leftEncoder.ResetCounts();
 
     // Set motors to desired percent
-    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent);
+    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent * RIGHT_FACTOR);
     leftMotor.SetPercent(MOTOR_FACTOR * actualPercent + LEFT_MODIFIER);
 
     // Run motors until avg of left and right encoder equals counts
@@ -153,7 +161,7 @@ void goForwardTimed(int percent, float seconds)
 {
     int actualPercent = ACTUAL_PERCENTAGE_POWER(percent);
 
-    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent);
+    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent * RIGHT_FACTOR);
     leftMotor.SetPercent(MOTOR_FACTOR * actualPercent + LEFT_MODIFIER);
 
     Sleep(seconds);
@@ -168,7 +176,7 @@ void goForward(int percent)
 {
     int actualPercent = ACTUAL_PERCENTAGE_POWER(percent);
 
-    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent);
+    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent * RIGHT_FACTOR);
     leftMotor.SetPercent(MOTOR_FACTOR * actualPercent + LEFT_MODIFIER);
 }
 
@@ -349,6 +357,13 @@ void turnComposter(int percent, float seconds)
 // Touch GUI for manually controlling motors. It exits after a command is given, so wrap it in a while (true) to keep doing it
 void motorControlGUI()
 {
+    // leftMotor.SetPercent(25);
+    // Sleep(5.0);
+    // leftMotor.Stop();
+    // rightMotor.SetPercent(25);
+    // Sleep(5.0);
+    // rightMotor.Stop();
+
     LCD.Clear();
     LCD.SetFontColor(WHITE);
     LCD.WriteLine("Touch a region:");
@@ -400,3 +415,63 @@ void motorControlGUI()
         }
     }
 }
+
+// Goes backwards for seconds and then goes forward the same number of counts it just went backwards
+void goBackwardsAndReturn(int percent) {
+    rightEncoder.ResetCounts();
+    leftEncoder.ResetCounts();
+
+    int actualPercent = ACTUAL_PERCENTAGE_POWER(percent);
+
+    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent * -1 * RIGHT_FACTOR);
+    leftMotor.SetPercent(MOTOR_FACTOR * actualPercent * -1 + LEFT_MODIFIER);
+    Sleep(1.0);
+    int countsForReturn = (leftEncoder.Counts() + rightEncoder.Counts()) / 2.0;
+
+    rightMotor.Stop();
+    leftMotor.Stop();
+    Sleep(MOTOR_DOWNTIME);
+
+    rightEncoder.ResetCounts();
+    leftEncoder.ResetCounts();
+    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent * RIGHT_FACTOR);
+    leftMotor.SetPercent(MOTOR_FACTOR * actualPercent + LEFT_MODIFIER);
+    while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < countsForReturn) {
+        Sleep(0);
+    }
+    rightMotor.Stop();
+    leftMotor.Stop();
+
+    Sleep(MOTOR_DOWNTIME);
+}
+
+// void goBackwardsAndReturn(int percent) {
+//     rightEncoder.ResetCounts();
+//     leftEncoder.ResetCounts();
+
+//     int actualPercent = ACTUAL_PERCENTAGE_POWER(percent);
+
+//     rightMotor.SetPercent(MOTOR_FACTOR * actualPercent * -1);
+//     leftMotor.SetPercent(MOTOR_FACTOR * actualPercent * -1 + LEFT_MODIFIER);
+//     while (bumpSwitch.Value() == NOT_ENGAGED) {
+//         Sleep(0);
+//     }
+//     int countsForReturn = (leftEncoder.Counts() + rightEncoder.Counts()) / 2.0;
+//     Sleep(0.3);
+
+//     rightMotor.Stop();
+//     leftMotor.Stop();
+//     Sleep(MOTOR_DOWNTIME);
+
+//     rightEncoder.ResetCounts();
+//     leftEncoder.ResetCounts();
+//     rightMotor.SetPercent(MOTOR_FACTOR * actualPercent);
+//     leftMotor.SetPercent(MOTOR_FACTOR * actualPercent + LEFT_MODIFIER);
+//     while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < countsForReturn) {
+//         Sleep(0);
+//     }
+//     rightMotor.Stop();
+//     leftMotor.Stop();
+
+//     Sleep(MOTOR_DOWNTIME);
+// }

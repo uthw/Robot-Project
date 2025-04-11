@@ -27,6 +27,13 @@ void ERCMain()
     RCS.InitializeTouchMenu("0410H5NPE"); // Uncomment for official runs (RCS)
     detectStart();
 
+    // start button
+    goBackward(25, 2);
+    Sleep(0.5);
+    goForward(25, 3);
+
+    // goBackwardsAndReturn(25);
+
     compostBin(speed);
     appleBasket(speed);
 

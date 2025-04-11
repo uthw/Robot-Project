@@ -16,7 +16,7 @@
 // #define IS_RED(voltage) (voltage > RED_THRESHOLD_LOW && voltage < RED_THRESHOLD_HIGH)
 
 #define BLUE_AVG 0.5
-#define BLUE_TOLERANCE 0.15 
+#define BLUE_TOLERANCE 0.15
 #define IS_BLUE(voltage) (voltage > BLUE_AVG - BLUE_TOLERANCE && voltage < BLUE_AVG + BLUE_TOLERANCE)
 
 #define RED_AVG 0.17
@@ -45,7 +45,9 @@ void detectStartDebug()
 // Same as detectStartDebug but without the LCD output
 void detectStart()
 {
+    // 1 sample of not being dark within N/A seconds
     while (IS_DARK(lightSensor.Value())) {
+        Sleep(0);
     }
 }
 
@@ -54,7 +56,11 @@ void goForwardUntilLight(int percent)
 {
     goForward(percent);
 
-    while (IS_DARK(lightSensor.Value())) { }
+    float startTime = TimeNow();
+
+    while (IS_DARK(lightSensor.Value()) && TimeNow() - startTime < 10) {
+        Sleep(0);
+    }
 
     stopMotors();
 }
@@ -80,7 +86,7 @@ void humidifier_button(int speed)
     } else if (IS_BLUE(lightSensor.Value())) {
         turnLeft(25, 10);
         LCD.Clear();
-        
+
         LCD.WriteLine("BLUE");
         LCD.WaitForTouchToStart();
         Sleep(TOUCH_BUFFER);
@@ -100,7 +106,7 @@ void humidifier_button(int speed)
         }
     }
 
-    setLeverArmDegree(50); // 
+    setLeverArmDegree(50); //
     goForwardTimed(30, 1);
 
     if (wasRed) {
@@ -134,8 +140,8 @@ void humidifier_button(int speed)
     goForward(speed, 40); // Finish
 }
 
-void finalButton() {
-    
+void finalButton()
+{
 }
 
 // This can be used to determine what the light sensor thinks a red, blue, and dark LED is. The values are shown on screen after calibration is done.
@@ -199,10 +205,10 @@ void compostBin(int speed)
     // goForward(speed, 2);
     turnLeft(speed, 45);
     goForward(speed, 7);
-    turnLeft(speed, 10);
+    turnLeft(speed, 4);
     goForward(speed, 3);
-    turnComposter(75, 3); // Turn composter
-    turnComposter(-75, 3); // Turn composter back
+    turnComposter(100, 3); // Turn composter
+    turnComposter(-100, 3); // Turn composter back
 }
 
 // Travels from compost bin to apple basket and carries the basket to the depot to drop it
@@ -224,56 +230,63 @@ void appleBasket(int speed)
     turnRight(speed, 20);
     goBackward(speed, 27);
     goForward(speed, 3);
-    turnRight(speed, 90);
+    turnRight(speed, 95);
     goForward(speed * 2, 30); // Go up ramp
 
     // Go to basket
     turnLeft(speed, 100);
     goBackward(speed, 8);
     goForward(speed, 10);
-    turnRight(speed, 100);
+    turnRight(speed, 110);
     goForward(speed, 15.5);
 
     // Deposit apples
     setLeverArmDegree(140);
-
 }
 
-// Travels from depot to levers to pull down the right one.
-void levers(int speed)
+void leverA(int speed)
 {
-    // Lever
-    goBackward(speed, 3);
-    setLeverArmDegree(90);
-    turnLeft(speed, 135); // Might be 45?
+    goForward(speed, 12);
+    turnRight(speed, 90);
+    goForward(speed, 6.5);
+    setLeverArmDegreeInstant(140); // Lower the lever
+    Sleep(1.0);
+    goBackward(speed, 4);
+    setLeverArmDegree(170);
+    Sleep(5.0); // Wait 5 seconds for extra points
+    goForward(speed, 4);
+    setLeverArmDegreeInstant(110); // Raise lever back up
+    Sleep(1.0);
 
-    // RCS-independent (always goes to lever C and pulls it)
-    // goForward(speed, 8);
-    // setLeverArmDegree(160); // Lower the lever
-    // goBackward(speed, 5);
-    // setLeverArmDegree(165); // Lower position to raise after - was originally
-    // Sleep(5.0); // Wait 5 seconds for extra points
-    // turnLeft(speed, 5); // Realign to go straight into the lever
-    // goForward(speed, 5);
-    // setLeverArmDegree(110); // Raise lever back up
+    goBackward(speed, 9);
+    turnLeft(speed, 45);
+}
 
+void leverAAlt(int speed)
+{
+    goForward(speed, 9);
+    turnRight(speed, 95);
+    goForward(speed, 7);
+    setLeverArmDegreeInstant(140); // Lower the lever
+    Sleep(1.0);
+    goBackward(speed, 4);
+    setLeverArmDegree(170);
+    Sleep(5.0); // Wait 5 seconds for extra points
+    goForward(speed, 4);
+    setLeverArmDegreeInstant(110); // Raise lever back up
+    Sleep(1.0);
+    goBackward(speed, 9);
+    turnLeft(speed, 45);
+    goForward(speed, 2);
+}
+
+void leverRCS(int speed)
+{
     // RCS-dependent
     int correctLever = RCS.GetLever(); // 0: left, 1: middle, 2: right
     switch (correctLever) {
     case LEFT:
-        goForward(speed, 12);
-        turnRight(speed, 90);
-        goForward(speed, 6.5);
-        setLeverArmDegree(130); // Lower the lever
-        Sleep(1.0);
-        goBackward(speed, 4);
-        setLeverArmDegree(170);
-        Sleep(5.0); // Wait 5 seconds for extra points
-        goForward(speed, 4);
-        setLeverArmDegree(110); // Raise lever back up
-
-        goBackward(speed, 9);
-        turnLeft(speed, 45);
+        leverA(speed);
         break;
     case MIDDLE:
         goForward(speed, 7);
@@ -311,6 +324,27 @@ void levers(int speed)
         LCD.WriteLine("RCS error");
         break;
     }
+}
+
+// Travels from depot to levers to pull down the right one.
+void levers(int speed)
+{
+    // Lever
+    goBackward(speed, 3);
+    setLeverArmDegree(90);
+    turnLeft(speed, 135); // Might be 45?
+
+    // RCS-independent (always goes to lever C and pulls it)
+    // goForward(speed, 8);
+    // setLeverArmDegree(160); // Lower the lever
+    // goBackward(speed, 5);
+    // setLeverArmDegree(165); // Lower position to raise after - was originally
+    // Sleep(5.0); // Wait 5 seconds for extra points
+    // turnLeft(speed, 5); // Realign to go straight into the lever
+    // goForward(speed, 5);
+    // setLeverArmDegree(110); // Raise lever back up
+
+    leverAAlt(speed);
 }
 
 // Travels from button to window to open and close it

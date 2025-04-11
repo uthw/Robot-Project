@@ -59,6 +59,8 @@ float getVoltages(float* voltages, AnalogInputPin& sensor, int len)
 //      array of voltages
 // @param avg
 //      average of voltages
+// @param len
+//      length of voltages (so dynamic arrays can be used)
 // @return standard deviation of voltages
 float standardDeviationOfVoltages(float* voltages, float avg, int len)
 {

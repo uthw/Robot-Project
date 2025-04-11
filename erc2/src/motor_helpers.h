@@ -26,5 +26,6 @@ void turnComposter(int percent);
 void stopComposter();
 void turnComposter(int percent, float seconds);
 void writeDebugMotor();
+void goBackwardsAndReturn(int percent);
 
 #endif
