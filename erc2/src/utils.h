@@ -14,5 +14,6 @@ void DisplayBatteryPercent();
 float getVoltages(float* voltages, AnalogInputPin& sensor, int len);
 float standardDeviationOfVoltages(float* voltages, float avg, int len);
 void waitForTouch(const char* message);
+void waitForTouchNoClear(const char* message);
 
 #endif

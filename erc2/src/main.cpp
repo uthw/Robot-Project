@@ -11,7 +11,8 @@ void ERCMain()
 {
     // // Uncomment this loop to run motors with touch screen
     // while (true) {
-    //     motorControlGUI();
+    //     // motorControlGUI();
+    //     taskGUI();
     // }
 
     // while (true) {
@@ -25,31 +26,36 @@ void ERCMain()
     int speed = 35;
 
     RCS.InitializeTouchMenu("0410H5NPE"); // Uncomment for official runs (RCS)
-    detectStart();
+    detectStartDebug();
 
     // start button
     goBackward(25, 2);
     Sleep(0.5);
-    goForward(25, 3);
+    goForward(25, 1.5);
 
-    // goBackwardsAndReturn(25);
+    // goBackwardsAndReturn(25, 0.3);
 
     compostBin(speed);
     appleBasket(speed);
 
-    // waitForTouch("touch for levers");
+    waitForTouch("touch for levers");
 
     levers(speed); // RCS-dependent lever code
 
-    // TODO: add code to go from lever to button to levers
-
-    // waitForTouch("touch for humidifier");
+    waitForTouch("touch for humidifier");
 
     humidifier_button(speed); // this one also does window and final button
+
+    window(speed); // RCS Independent
 
     // LCD.Clear();
     // LCD.WriteLine("touch for window");
     // LCD.WaitForTouchToStart();
     // Sleep(TOUCH_BUFFER);
     // window(speed);
+
+    while (true) {
+        // motorControlGUI();
+        taskGUI();
+    }
 }

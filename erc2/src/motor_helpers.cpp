@@ -44,6 +44,8 @@ AnalogInputPin middleOpto(FEHIO::Pin0); // Middle optosensor
 #define LEVER_ARM_MAX 2500
 #define LEVER_ARM_DEFAULT 120
 
+#define MAX_TIMEOUT 10 // Maximum time in seconds for goForward
+
 int lastDegree = LEVER_ARM_DEFAULT;
 
 enum bumpSwitchState {
@@ -143,8 +145,11 @@ void goForward(int percent, float inches)
     rightMotor.SetPercent(MOTOR_FACTOR * actualPercent * RIGHT_FACTOR);
     leftMotor.SetPercent(MOTOR_FACTOR * actualPercent + LEFT_MODIFIER);
 
+    float startTime = TimeNow();
+
     // Run motors until avg of left and right encoder equals counts
-    while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < counts) {
+    while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < counts && 
+           TimeNow() - startTime < MAX_TIMEOUT) {
         // For some reason empty while loops don't work on arduino. This is a workaround
         // writeDebugMotor();
         Sleep(0);
@@ -417,7 +422,7 @@ void motorControlGUI()
 }
 
 // Goes backwards for seconds and then goes forward the same number of counts it just went backwards
-void goBackwardsAndReturn(int percent) {
+void goBackwardsAndReturn(int percent, float seconds) {
     rightEncoder.ResetCounts();
     leftEncoder.ResetCounts();
 
@@ -445,33 +450,65 @@ void goBackwardsAndReturn(int percent) {
     Sleep(MOTOR_DOWNTIME);
 }
 
-// void goBackwardsAndReturn(int percent) {
-//     rightEncoder.ResetCounts();
-//     leftEncoder.ResetCounts();
+// Currently unused alternative that uses a bump switch instead of time
+void goBackwardsUntilBumpAndReturn(int percent) {
+    rightEncoder.ResetCounts();
+    leftEncoder.ResetCounts();
 
-//     int actualPercent = ACTUAL_PERCENTAGE_POWER(percent);
+    int actualPercent = ACTUAL_PERCENTAGE_POWER(percent);
 
-//     rightMotor.SetPercent(MOTOR_FACTOR * actualPercent * -1);
-//     leftMotor.SetPercent(MOTOR_FACTOR * actualPercent * -1 + LEFT_MODIFIER);
-//     while (bumpSwitch.Value() == NOT_ENGAGED) {
-//         Sleep(0);
-//     }
-//     int countsForReturn = (leftEncoder.Counts() + rightEncoder.Counts()) / 2.0;
-//     Sleep(0.3);
+    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent * -1);
+    leftMotor.SetPercent(MOTOR_FACTOR * actualPercent * -1 + LEFT_MODIFIER);
+    while (bumpSwitch.Value() == NOT_ENGAGED) {
+        Sleep(0);
+    }
+    int countsForReturn = (leftEncoder.Counts() + rightEncoder.Counts()) / 2.0;
+    Sleep(0.3);
 
-//     rightMotor.Stop();
-//     leftMotor.Stop();
-//     Sleep(MOTOR_DOWNTIME);
+    rightMotor.Stop();
+    leftMotor.Stop();
+    Sleep(MOTOR_DOWNTIME);
 
-//     rightEncoder.ResetCounts();
-//     leftEncoder.ResetCounts();
-//     rightMotor.SetPercent(MOTOR_FACTOR * actualPercent);
-//     leftMotor.SetPercent(MOTOR_FACTOR * actualPercent + LEFT_MODIFIER);
-//     while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < countsForReturn) {
-//         Sleep(0);
-//     }
-//     rightMotor.Stop();
-//     leftMotor.Stop();
+    rightEncoder.ResetCounts();
+    leftEncoder.ResetCounts();
+    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent);
+    leftMotor.SetPercent(MOTOR_FACTOR * actualPercent + LEFT_MODIFIER);
+    while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < countsForReturn) {
+        Sleep(0);
+    }
+    rightMotor.Stop();
+    leftMotor.Stop();
 
-//     Sleep(MOTOR_DOWNTIME);
-// }
+    Sleep(MOTOR_DOWNTIME);
+}
+
+void goForward(int percent, float inches, float downtime, float timeout)
+{
+    // Convert inches to counts
+    // Could change this to mm later if more precision needed
+    int counts = INCHES_TO_COUNTS(inches);
+    int actualPercent = ACTUAL_PERCENTAGE_POWER(percent);
+
+    // Reset counts
+    rightEncoder.ResetCounts();
+    leftEncoder.ResetCounts();
+
+    // Set motors to desired percent
+    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent * RIGHT_FACTOR);
+    leftMotor.SetPercent(MOTOR_FACTOR * actualPercent + LEFT_MODIFIER);
+
+    float startTime = TimeNow();
+
+    // Run motors until avg of left and right encoder equals counts
+    while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < counts && 
+           TimeNow() - startTime < timeout) {
+        // For some reason empty while loops don't work on arduino. This is a workaround
+        // writeDebugMotor();
+        Sleep(0);
+    }
+
+    // Turn off motors
+    rightMotor.Stop();
+    leftMotor.Stop();
+    Sleep(downtime);
+}

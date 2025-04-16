@@ -3,8 +3,8 @@
 #include <FEH.h>
 #include <FEHUtility.h>
 
-#define DARK_THRESHOLD 3.3
-#define DARK_TOLERANCE 0.1 // Unused
+#define DARK_THRESHOLD 2.5
+#define DARK_TOLERANCE 0.0 // Unused
 #define IS_DARK(voltage) (voltage >= DARK_THRESHOLD - DARK_TOLERANCE)
 
 // #define BLUE_THRESHOLD_HIGH 0.65
@@ -15,12 +15,12 @@
 // #define RED_THRESHOLD_LOW 0.0
 // #define IS_RED(voltage) (voltage > RED_THRESHOLD_LOW && voltage < RED_THRESHOLD_HIGH)
 
-#define BLUE_AVG 0.5
+#define BLUE_AVG 0.72
 #define BLUE_TOLERANCE 0.15
 #define IS_BLUE(voltage) (voltage > BLUE_AVG - BLUE_TOLERANCE && voltage < BLUE_AVG + BLUE_TOLERANCE)
 
-#define RED_AVG 0.17
-#define RED_TOLERANCE 0.17
+#define RED_AVG 0.34
+#define RED_TOLERANCE 0.15
 #define IS_RED(voltage) (voltage > RED_AVG - RED_TOLERANCE && voltage < RED_AVG + RED_TOLERANCE)
 
 enum LeverPosition {
@@ -36,9 +36,11 @@ void detectStartDebug()
 {
     LCD.WriteLine("Waiting to start");
     while (IS_DARK(lightSensor.Value())) {
-        LCD.WriteLine(lightSensor.Value());
+        
     }
     LCD.Clear();
+    LCD.Write("Lit value found: ");
+    LCD.WriteLine(lightSensor.Value());
     LCD.WriteLine("Starting");
 }
 
@@ -65,44 +67,54 @@ void goForwardUntilLight(int percent)
     stopMotors();
 }
 
+void printLightSensorValue() {
+    LCD.Write("Light sensor value: ");
+    LCD.WriteLine(lightSensor.Value());
+}
+
 // Travel to and complete button task.
 // Caution: will need to update inches since this was written while motor speed depended on battery
 void humidifier_button(int speed)
 {
     // Go to button light and read
     goForwardUntilLight(speed);
+    goForward(speed, 0.5); // experimental correction
     Sleep(0.75);
 
     LCD.Clear();
     bool wasRed = false;
     if (IS_RED(lightSensor.Value())) {
         wasRed = true;
-        turnRight(25, 10);
+        turnRight(22, 10);
         LCD.Clear();
 
         LCD.WriteLine("RED");
-        LCD.WaitForTouchToStart();
-        Sleep(TOUCH_BUFFER);
+        printLightSensorValue();
+        waitForTouch("Touch to continue");
     } else if (IS_BLUE(lightSensor.Value())) {
-        turnLeft(25, 10);
+        turnLeft(22, 10);
         LCD.Clear();
 
         LCD.WriteLine("BLUE");
-        LCD.WaitForTouchToStart();
-        Sleep(TOUCH_BUFFER);
+        printLightSensorValue();
+        waitForTouch("Touch to continue");
     } else {
         // Just do a random one
         if (rand() % 2 == 0) {
             wasRed = true;
-            turnRight(25, 10);
+            turnRight(22, 10);
             LCD.Clear();
 
             LCD.WriteLine("Random (red)");
+            printLightSensorValue();
+            waitForTouch("Touch to continue");
         } else {
-            turnLeft(25, 10);
+            turnLeft(22, 10);
             LCD.Clear();
 
             LCD.WriteLine("Random (blue)");
+            printLightSensorValue();
+            waitForTouch("Touch to continue");
         }
     }
 
@@ -110,34 +122,13 @@ void humidifier_button(int speed)
     goForwardTimed(30, 1);
 
     if (wasRed) {
-        turnRight(25, 5);
+        turnRight(25, 3);
         // turnLeft(25, 10);
         Sleep(0);
     } else {
         goBackward(speed, 2);
         turnRight(25, 25);
     }
-
-    // Robot moves backwards to align with window, opens it, then finishes
-
-    // waitForTouch("touch to open window");
-
-    goBackward(30, 35); // Go back into the plexiglass
-
-    float startTime = TimeNow();
-    goForward(speed * 0.8);
-    // Goes forward until window is open or 15 seconds have passed
-    while (RCS.isWindowOpen() == 0 && TimeNow() - startTime < 15) {
-        Sleep(0);
-    }
-    stopMotors();
-
-    // waitForTouch("touch for final button");
-
-    goBackward(speed, 30); // Go back into plexiglass again
-    goForward(speed, 4);
-    turnLeft(speed, 90); // Turn towards ending button
-    goForward(speed, 40); // Finish
 }
 
 void finalButton()
@@ -207,6 +198,7 @@ void compostBin(int speed)
     goForward(speed, 7);
     turnLeft(speed, 4);
     goForward(speed, 3);
+    waitForTouch("touch to turn composter");
     turnComposter(100, 3); // Turn composter
     turnComposter(-100, 3); // Turn composter back
 }
@@ -218,26 +210,27 @@ void appleBasket(int speed)
     goBackward(speed, 3);
     turnRight(speed, 102);
     goBackward(speed, 10);
-    goForward(speed, 21);
+    goForward(speed, 21.25);
     turnLeft(speed, 85); // Now facing the stump
 
     setLeverArmDegree(120); // Forward
 
-    goForward(speed, 10);
-    setLeverArmDegree(70); // Pick up apples
+    goForward(speed, 10, MOTOR_DOWNTIME, 5.0);
+    waitForTouch("touch to pick up apples");
+    setLeverArmDegree(65); // Pick up apples
 
     goBackward(speed, 3);
     turnRight(speed, 20);
-    goBackward(speed, 27);
+    goBackward(speed, 27); // Bump into plexiglass
     goForward(speed, 3);
-    turnRight(speed, 95);
+    turnRight(speed, 92);
     goForward(speed * 2, 30); // Go up ramp
 
     // Go to basket
     turnLeft(speed, 100);
-    goBackward(speed, 8);
-    goForward(speed, 10);
-    turnRight(speed, 110);
+    goBackward(speed, 9);
+    goForward(speed, 9.5);
+    turnRight(speed, 102); // this value may need to be adjusted (original 105)
     goForward(speed, 15.5);
 
     // Deposit apples
@@ -264,15 +257,16 @@ void leverA(int speed)
 
 void leverAAlt(int speed)
 {
-    goForward(speed, 9);
-    turnRight(speed, 95);
-    goForward(speed, 7);
-    setLeverArmDegreeInstant(140); // Lower the lever
+    goForward(speed, 9.5); // Goes across blue lines on ground
+    turnRight(speed, 92); // Facing lever
+    waitForTouch("touch to pull lever");
+    goForward(speed, 6.5);
+    setLeverArmDegreeInstant(160); // Lower the lever
     Sleep(1.0);
     goBackward(speed, 4);
     setLeverArmDegree(170);
     Sleep(5.0); // Wait 5 seconds for extra points
-    goForward(speed, 4);
+    goForward(speed, 4.5);
     setLeverArmDegreeInstant(110); // Raise lever back up
     Sleep(1.0);
     goBackward(speed, 9);
@@ -348,7 +342,7 @@ void levers(int speed)
 }
 
 // Travels from button to window to open and close it
-void window(int speed)
+void windowBonus(int speed)
 {
     // Align with wall near ramp - this part uses dummy values
     goBackward(speed, 40);
@@ -372,4 +366,78 @@ void window(int speed)
     goBackward(40, 20);
 
     // Could add something here where the robot tries to run it back if it fails the first time
+}
+
+void window(int speed) {
+    // Robot moves backwards to align with window, opens it, then finishes
+
+    // waitForTouch("touch to open window");
+
+    goBackward(30, 30); // Go back into the plexiglass
+
+    float startTime = TimeNow();
+    goForward(speed * 0.8);
+    // Goes forward until window is open or 15 seconds have passed
+    while (RCS.isWindowOpen() == 0 && TimeNow() - startTime < 5) {
+        // Sleep(0);
+        LCD.Clear();
+        LCD.Write("isWindowOpen: ");
+        LCD.WriteLine(RCS.isWindowOpen());
+        LCD.Write("Elapsed Time: ");
+        LCD.WriteLine(TimeNow() - startTime);
+        Sleep(0.1); // Add a small delay to avoid excessive polling
+    }
+    stopMotors();
+
+    // waitForTouch("touch for final button");
+
+    goBackward(speed, 30); // Go back into plexiglass again
+    goForward(speed, 5);
+    turnRight(speed, 90); // Turn towards ending button
+    goBackward(speed, 40); // Finish
+}
+
+// Like motorControlGUI but for tasks
+void taskGUI()
+{
+    LCD.Clear();
+    LCD.SetFontColor(WHITE);
+    LCD.WriteLine("What should I do?");
+    LCD.WriteAt("Button", XMAX / 4, YMAX / 4); // left region
+    LCD.WriteAt("Lever", XMAX / 2 + 10, YMAX / 4); // right region
+    LCD.WriteAt("Compost", XMAX / 4 - 20, YMAX / 2 + 10); // bottom left region
+    LCD.WriteAt("Apple", XMAX / 2 + 10, YMAX / 2 + 10); // top part of bottom right region
+    LCD.WriteAt("Window", XMAX / 2 + 10, YMAX * 0.75 + 20); // bottom part of bottom right region
+
+    int x, y;
+
+    LCD.DrawVerticalLine(XMAX / 2, 20, YMAX); // goes halfway down
+    LCD.DrawHorizontalLine(YMAX / 2, 0, XMAX); // goes all the way across
+    LCD.DrawHorizontalLine(YMAX * 0.75, XMAX / 2, XMAX);
+
+    LCD.WaitForTouchToStart();
+    while (!LCD.Touch(&x, &y)) {
+        Sleep(0.1);
+    }
+
+    int spd = 35;
+
+    // Determine which region was touched
+    if (x < XMAX / 2 && y < YMAX / 2) { // Button
+        waitForTouch("Touch for humidifier");
+        humidifier_button(spd);
+    } else if (x >= XMAX / 2 && y < YMAX / 2) { // Lever
+        waitForTouch("Touch for lever");
+        leverAAlt(spd);
+    } else if (x < XMAX / 2 && y >= YMAX / 2) { // Compost
+        waitForTouch("Touch for compost");
+        detectStartDebug();
+        compostBin(spd);
+    } else if (x >= XMAX / 2 && y >= YMAX / 2) { // Apple
+        waitForTouch("Touch for apple basket");
+        appleBasket(spd);
+    } else if (y >= YMAX * 0.75) { // Window
+        waitForTouch("Touch for window");
+        window(spd);
+    }
 }

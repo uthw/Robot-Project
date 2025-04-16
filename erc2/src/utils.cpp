@@ -12,6 +12,8 @@
 #define READING_INTERVAL 0.05 // Time in seconds between readings
 
 #define TOUCH_BUFFER 0.2
+#define UPDATE_INTERVAL 0.5
+#define CHAR_HEIGHT 20
 
 // Clears the screen and displays the battery percentage
 void DisplayBatteryPercent()
@@ -40,10 +42,23 @@ void DisplayBatteryPercent()
 float getVoltages(float* voltages, AnalogInputPin& sensor, int len)
 {
     float sum = 0;
+    LCD.Clear();
+    LCD.WriteLine("Reading voltages...");
+    float lastUpdate = TimeNow();
 
     for (int i = 0; i < len; i++) {
         voltages[i] = sensor.Value();
         sum += voltages[i];
+
+        // Update progress on screen every 10 seconds
+        if (TimeNow() - lastUpdate >= UPDATE_INTERVAL) {
+            lastUpdate = TimeNow();
+            LCD.DrawRectangle(0, (YMAX / 2) - CHAR_HEIGHT, XMAX, CHAR_HEIGHT * 2);
+            LCD.WriteAt("Progress: ", 0, YMAX / 2);
+            LCD.Write((i + 1) * 100 / len);
+            LCD.WriteLine("%");
+        }
+
         Sleep(READING_INTERVAL);
     }
 
@@ -82,6 +97,13 @@ float standardDeviationOfVoltages(float* voltages, float avg, int len)
 void waitForTouch(const char* message)
 {
     LCD.Clear();
+    LCD.WriteLine(message);
+    LCD.WaitForTouchToStart();
+    Sleep(TOUCH_BUFFER);
+}
+
+void waitForTouchNoClear(const char* message)
+{
     LCD.WriteLine(message);
     LCD.WaitForTouchToStart();
     Sleep(TOUCH_BUFFER);

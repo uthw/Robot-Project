@@ -6,6 +6,7 @@
 #include <FEHMotor.h>
 
 #define LEVER_ARM_DEFAULT 120 // default (extending out towards robot) may need to be updated over time
+#define MOTOR_DOWNTIME 0.2
 
 void turnRight(int percent, int degrees);
 void turnLeft(int percent, int degrees);
@@ -26,6 +27,8 @@ void turnComposter(int percent);
 void stopComposter();
 void turnComposter(int percent, float seconds);
 void writeDebugMotor();
-void goBackwardsAndReturn(int percent);
+void goBackwardsAndReturn(int percent, float seconds);
+void goBackwardsUntilBumpAndReturn(int percent);
+void goForward(int percent, float inches, float downtime, float timeout);
 
 #endif
