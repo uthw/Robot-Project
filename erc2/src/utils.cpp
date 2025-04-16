@@ -50,10 +50,12 @@ float getVoltages(float* voltages, AnalogInputPin& sensor, int len)
         voltages[i] = sensor.Value();
         sum += voltages[i];
 
-        // Update progress on screen every 10 seconds
+        // Update progress on screen every UPDATE_INTERVAL seconds
         if (TimeNow() - lastUpdate >= UPDATE_INTERVAL) {
             lastUpdate = TimeNow();
-            LCD.DrawRectangle(0, (YMAX / 2) - CHAR_HEIGHT, XMAX, CHAR_HEIGHT * 2);
+            LCD.SetFontColor(FEHLCD::Black);
+            LCD.FillRectangle(0, (YMAX / 2) - CHAR_HEIGHT, XMAX, CHAR_HEIGHT * 2);
+            LCD.SetFontColor(FEHLCD::White);
             LCD.WriteAt("Progress: ", 0, YMAX / 2);
             LCD.Write((i + 1) * 100 / len);
             LCD.WriteLine("%");

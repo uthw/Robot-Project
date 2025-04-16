@@ -7,14 +7,6 @@
 #define DARK_TOLERANCE 0.0 // Unused
 #define IS_DARK(voltage) (voltage >= DARK_THRESHOLD - DARK_TOLERANCE)
 
-// #define BLUE_THRESHOLD_HIGH 0.65
-// #define BLUE_THRESHOLD_LOW 0.35
-// #define IS_BLUE(voltage) (voltage > BLUE_THRESHOLD_LOW && voltage < BLUE_THRESHOLD_HIGH)
-
-// #define RED_THRESHOLD_HIGH 0.33
-// #define RED_THRESHOLD_LOW 0.0
-// #define IS_RED(voltage) (voltage > RED_THRESHOLD_LOW && voltage < RED_THRESHOLD_HIGH)
-
 #define BLUE_AVG 0.72
 #define BLUE_TOLERANCE 0.15
 #define IS_BLUE(voltage) (voltage > BLUE_AVG - BLUE_TOLERANCE && voltage < BLUE_AVG + BLUE_TOLERANCE)
@@ -22,6 +14,8 @@
 #define RED_AVG 0.34
 #define RED_TOLERANCE 0.15
 #define IS_RED(voltage) (voltage > RED_AVG - RED_TOLERANCE && voltage < RED_AVG + RED_TOLERANCE)
+
+#define WINDOW_TIMEOUT 5
 
 enum LeverPosition {
     LEFT = 0,
@@ -378,7 +372,7 @@ void window(int speed) {
     float startTime = TimeNow();
     goForward(speed * 0.8);
     // Goes forward until window is open or 15 seconds have passed
-    while (RCS.isWindowOpen() == 0 && TimeNow() - startTime < 5) {
+    while (RCS.isWindowOpen() == 0 && TimeNow() - startTime < WINDOW_TIMEOUT) {
         // Sleep(0);
         LCD.Clear();
         LCD.Write("isWindowOpen: ");
