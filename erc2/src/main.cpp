@@ -12,11 +12,11 @@ void ERCMain()
     DisplayBatteryPercent();
     Sleep(0.5);
 
-    // // Uncomment this loop to run motors with touch screen
-    // while (true) {
-    //     motorControlGUI();
-    //     // taskGUI();
-    // }
+    // Uncomment this loop to run motors with touch screen
+    while (true) {
+        motorControlGUI();
+        // taskGUI();
+    }
 
     // while (true) {
     // }

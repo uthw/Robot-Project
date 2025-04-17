@@ -3,6 +3,7 @@
 
 #define MAX_SPEED 50 // Limits maximum dynamic speed of motors (max: 100)
 #define MAX_CORRECTION 0.4
+#define HIGH_SPEED_SCALING 1.25 // Scales up proportional correction for higher speeds
 
 // Constructor with default gains
 PID::PID(float p, float i, float d)
@@ -73,8 +74,8 @@ bool runPID(int targetCounts, FEHMotor& rightMotor, FEHMotor& leftMotor, Digital
     float tolerance = 1.0;
     float timeout = 10.0;
     float baseMagnitude = fabs(baseRightPower); // Magnitude of base power for scaling
-    float speedAmplifier = min(1.0, baseMagnitude / 20);
-    float kp = 0.8 + (speedAmplifier * 0.6);
+    float speedAmplifier = min(1.0, baseMagnitude / 15);
+    float kp = 0.8 + (speedAmplifier * HIGH_SPEED_SCALING); // Proportional gain
 
     PID pid(kp, 0.0, 0.1); // Needs to be adjusted fs
     pid.reset();
@@ -119,7 +120,7 @@ bool runPID(int targetCounts, FEHMotor& rightMotor, FEHMotor& leftMotor, Digital
 
         // STALL DETECTION - Secondary exit condition
         // Check if we're still moving
-        if (fabs(currentCounts - lastPosition) < 0.2) {
+        if (fabs(currentCounts - lastPosition) < 3) {
             // Not moving or moving very slowly
             if (!isStalled) {
                 // Start stall timer
@@ -149,7 +150,7 @@ bool runPID(int targetCounts, FEHMotor& rightMotor, FEHMotor& leftMotor, Digital
 
         if (shouldPivot) {
             // For turns, we need a minimum correction capability regardless of speed
-            maxCorrection = max(10.0f, baseMagnitude * 0.6f); // At least 10% or 60% of base power
+            maxCorrection = max(10.0f, baseMagnitude * HIGH_SPEED_SCALING); // At least 10% or HSS of base power
         } else {
             // For straight driving, keep the proportional limit
             maxCorrection = baseMagnitude * MAX_CORRECTION;

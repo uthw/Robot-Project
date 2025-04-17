@@ -394,16 +394,17 @@ void turnLeftPID(int percent, int degrees)
     leftEncoder.ResetCounts();
 
     // Set motors to desired percent
-    int rightPercent = actualPercent * -1 * RIGHT_FACTOR;
-    int leftPercent = actualPercent * LEFT_FACTOR;
+    int rightPercent = actualPercent * RIGHT_FACTOR;
+    int leftPercent = actualPercent * -1 * LEFT_FACTOR;
 
     runPID(counts, rightMotor, leftMotor, rightEncoder, leftEncoder, rightPercent, leftPercent);
 }
 
 void turnRightPID(int percent, int degrees)
 {
+    float scale = 1.00;
     // Convert degrees to counts
-    int counts = DEGREES_TO_COUNTS(degrees);
+    int counts = DEGREES_TO_COUNTS(degrees * scale);
     int actualPercent = ACTUAL_PERCENTAGE_POWER(percent);
 
     // Reset counts
@@ -411,8 +412,8 @@ void turnRightPID(int percent, int degrees)
     leftEncoder.ResetCounts();
 
     // Set motors to desired percent
-    int rightPercent = actualPercent * RIGHT_FACTOR;
-    int leftPercent = actualPercent * -1 * LEFT_FACTOR;
+    int rightPercent = actualPercent * -1 * RIGHT_FACTOR;
+    int leftPercent = actualPercent * LEFT_FACTOR;
 
     runPID(counts, rightMotor, leftMotor, rightEncoder, leftEncoder, rightPercent, leftPercent);
 }
@@ -447,7 +448,7 @@ void motorControlGUI()
         Sleep(0.1);
     }
 
-    int motorPower = 25;
+    int motorPower = 15;
 
     // Determine which region was touched
     if (x < XMAX / 2 && y < YMAX / 2) { // Left

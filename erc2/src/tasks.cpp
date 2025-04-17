@@ -191,7 +191,7 @@ void compostBin(int speed)
     turnLeft(speed, 45);
     goForward(speed, 7);
     turnLeft(speed, 4);
-    goForward(speed, 2.75);
+    goForward(speed, 2.85);
     waitForTouch("touch to turn composter");
     turnComposter(100, 3); // Turn composter
     turnComposter(-100, 3); // Turn composter back
