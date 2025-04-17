@@ -3,8 +3,8 @@
 #include <FEH.h>
 #include <FEHUtility.h>
 
-#define DARK_THRESHOLD 2.5
-#define DARK_TOLERANCE 0.0 // Unused
+#define DARK_THRESHOLD 2.0 // Brightest light level (lowest voltage) that is considered dark
+#define DARK_TOLERANCE 0.0 // Not needed
 #define IS_DARK(voltage) (voltage >= DARK_THRESHOLD - DARK_TOLERANCE)
 
 #define BLUE_AVG 0.72
@@ -121,7 +121,7 @@ void humidifier_button(int speed)
         Sleep(0);
     } else {
         goBackward(speed, 2);
-        turnRight(25, 25);
+        turnRight(25, 26);
     }
 }
 
@@ -191,7 +191,7 @@ void compostBin(int speed)
     turnLeft(speed, 45);
     goForward(speed, 7);
     turnLeft(speed, 4);
-    goForward(speed, 3);
+    goForward(speed, 2.75);
     waitForTouch("touch to turn composter");
     turnComposter(100, 3); // Turn composter
     turnComposter(-100, 3); // Turn composter back
@@ -217,7 +217,7 @@ void appleBasket(int speed)
     turnRight(speed, 20);
     goBackward(speed, 27); // Bump into plexiglass
     goForward(speed, 3);
-    turnRight(speed, 92);
+    turnRight(speed, 95);
     goForward(speed * 2, 30); // Go up ramp
 
     // Go to basket
@@ -252,7 +252,7 @@ void leverA(int speed)
 void leverAAlt(int speed)
 {
     goForward(speed, 9.5); // Goes across blue lines on ground
-    turnRight(speed, 92); // Facing lever
+    turnRight(speed, 95); // Facing lever (up from 92)
     waitForTouch("touch to pull lever");
     goForward(speed, 6.5);
     setLeverArmDegreeInstant(160); // Lower the lever
@@ -388,7 +388,7 @@ void window(int speed) {
     goBackward(speed, 30); // Go back into plexiglass again
     goForward(speed, 5);
     turnRight(speed, 90); // Turn towards ending button
-    goBackward(speed, 40); // Finish
+    goBackward(speed, 45); // Finish
 }
 
 // Like motorControlGUI but for tasks

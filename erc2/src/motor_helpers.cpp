@@ -4,8 +4,8 @@ using namespace std;
 #include <FEHMotor.h>
 // Cmath and algorithm have been killed by ERC2
 #include "motor_helpers.h"
-#include "utils.h"
 #include "motor_pid.h"
+#include "utils.h"
 #include <math.h>
 
 // All perspectives (r/m/l) are from the back of the robot
@@ -33,8 +33,7 @@ AnalogInputPin middleOpto(FEHIO::Pin0); // Middle optosensor
 #define COUNTS_IN_90_DEGREES 225 // Old: 215
 #define COUNTS_IN_1_INCH 32 // Old: 32
 
-#define LEFT_MODIFIER 0 // Added to left motor speed. Set to 0 if it's going straight right now
-#define MOTOR_FACTOR 1 // Used to reverse the direction of the motors. Set to -1 if the motors are going in the wrong direction
+#define LEFT_FACTOR 1 // Applied to left motor
 #define RIGHT_FACTOR -1 // Applied to right motor
 
 #define MOTOR_DOWNTIME 0.2 // Time in seconds motors stop after a drivetrain method is called
@@ -59,7 +58,7 @@ enum bumpSwitchState {
 void writeDebugMotor()
 {
     LCD.SetFontColor(BLACK);
-    LCD.DrawRectangle(0, YMAX / 2, XMAX, YMAX);
+    LCD.FillRectangle(0, YMAX / 2, XMAX, YMAX);
     Sleep(0.2);
     LCD.SetFontColor(WHITE);
     LCD.WriteAt("left counts: ", 0, YMAX / 2);
@@ -84,19 +83,16 @@ void turnRight(int percent, int degrees)
     leftEncoder.ResetCounts();
 
     // Set motors to desired percent
-    int rightPercent = MOTOR_FACTOR * actualPercent * -1 * RIGHT_FACTOR;
-    int leftPercent = MOTOR_FACTOR * actualPercent + LEFT_MODIFIER;
+    int rightPercent = actualPercent * -1 * RIGHT_FACTOR;
+    int leftPercent = actualPercent * LEFT_FACTOR;
     rightMotor.SetPercent(rightPercent);
     leftMotor.SetPercent(leftPercent);
 
-    // // Run motors until avg of left and right encoder equals counts
-    // while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < counts) {
-    //     // writeDebugMotor();
-    //     Sleep(0);
-    // }
-
-    // Run pid until it thinks motors should stop
-    runPID(counts, rightMotor, leftMotor, rightEncoder, leftEncoder, rightPercent, leftPercent);
+    // Run motors until avg of left and right encoder equals counts
+    while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < counts) {
+        // writeDebugMotor();
+        Sleep(0);
+    }
 
     // Turn off motors
     rightMotor.Stop();
@@ -120,18 +116,16 @@ void turnLeft(int percent, int degrees)
     leftEncoder.ResetCounts();
 
     // Set motors to desired percent
-    int rightPercent = MOTOR_FACTOR * actualPercent * RIGHT_FACTOR;
-    int leftPercent = MOTOR_FACTOR * actualPercent + LEFT_MODIFIER;
+    int rightPercent = actualPercent * RIGHT_FACTOR;
+    int leftPercent = actualPercent * -1 * LEFT_FACTOR;
     rightMotor.SetPercent(rightPercent);
     leftMotor.SetPercent(leftPercent);
 
-    // // Run motors until avg of left and right encoder equals counts
-    // while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < counts) {
-    //     // writeDebugMotor();
-    //     Sleep(0);
-    // }
-
-    runPID(counts, rightMotor, leftMotor, rightEncoder, leftEncoder, rightPercent, leftPercent);
+    // Run motors until avg of left and right encoder equals counts
+    while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < counts) {
+        // writeDebugMotor();
+        Sleep(0);
+    }
 
     // Turn off motors
     rightMotor.Stop();
@@ -152,22 +146,20 @@ void goForward(int percent, float inches)
     leftEncoder.ResetCounts();
 
     // Set motors to desired percent
-    int rightPercent = MOTOR_FACTOR * actualPercent * RIGHT_FACTOR;
-    int leftPercent = MOTOR_FACTOR * actualPercent + LEFT_MODIFIER;
+    int rightPercent = actualPercent * RIGHT_FACTOR;
+    int leftPercent = actualPercent * LEFT_FACTOR;
     rightMotor.SetPercent(rightPercent);
     leftMotor.SetPercent(leftPercent);
 
     float startTime = TimeNow();
 
-    // // Run motors until avg of left and right encoder equals counts
-    // while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < counts && 
-    //        TimeNow() - startTime < MAX_TIMEOUT) {
-    //     // For some reason empty while loops don't work on arduino. This is a workaround
-    //     // writeDebugMotor();
-    //     Sleep(0);
-    // }
-
-    runPID(counts, rightMotor, leftMotor, rightEncoder, leftEncoder, rightPercent, leftPercent);
+    // Run motors until avg of left and right encoder equals counts
+    while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < counts &&
+           TimeNow() - startTime < MAX_TIMEOUT) {
+        // For some reason empty while loops don't work on arduino. This is a workaround
+        // writeDebugMotor();
+        Sleep(0);
+    }
 
     // Turn off motors
     rightMotor.Stop();
@@ -180,8 +172,8 @@ void goForwardTimed(int percent, float seconds)
 {
     int actualPercent = ACTUAL_PERCENTAGE_POWER(percent);
 
-    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent * RIGHT_FACTOR);
-    leftMotor.SetPercent(MOTOR_FACTOR * actualPercent + LEFT_MODIFIER);
+    rightMotor.SetPercent(actualPercent * RIGHT_FACTOR);
+    leftMotor.SetPercent(LEFT_FACTOR * actualPercent);
 
     Sleep(seconds);
 
@@ -195,8 +187,8 @@ void goForward(int percent)
 {
     int actualPercent = ACTUAL_PERCENTAGE_POWER(percent);
 
-    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent * RIGHT_FACTOR);
-    leftMotor.SetPercent(MOTOR_FACTOR * actualPercent + LEFT_MODIFIER);
+    rightMotor.SetPercent(LEFT_FACTOR * actualPercent * RIGHT_FACTOR);
+    leftMotor.SetPercent(actualPercent);
 }
 
 // Overload of goForward that allows to customize the downtime
@@ -322,7 +314,7 @@ void calibrateOptosensors()
     LCD.WriteLine("Touch to continue");
     LCD.WaitForTouchToStart();
     Sleep(TOUCH_BUFFER);
-    LCD.Clear();    
+    LCD.Clear();
 }
 
 // Gradually moves the lever arm to the desired degree, one degree per SERVO_ADJUSTMENT_INTERVAL seconds. Moving the servo too fast might be helping it fall off
@@ -373,6 +365,58 @@ void turnComposter(int percent, float seconds)
     Sleep(MOTOR_DOWNTIME);
 }
 
+void goForwardPID(int percent, float inches)
+{
+    // Convert inches to counts
+    // Could change this to mm later if more precision needed
+    int counts = INCHES_TO_COUNTS(inches);
+    int actualPercent = ACTUAL_PERCENTAGE_POWER(percent);
+
+    // Reset counts
+    rightEncoder.ResetCounts();
+    leftEncoder.ResetCounts();
+
+    // Set motors to desired percent
+    int rightPercent = actualPercent * RIGHT_FACTOR;
+    int leftPercent = actualPercent * LEFT_FACTOR;
+
+    runPID(counts, rightMotor, leftMotor, rightEncoder, leftEncoder, rightPercent, leftPercent);
+}
+
+void turnLeftPID(int percent, int degrees)
+{
+    // Convert degrees to counts
+    int counts = DEGREES_TO_COUNTS(degrees);
+    int actualPercent = ACTUAL_PERCENTAGE_POWER(percent);
+
+    // Reset counts
+    rightEncoder.ResetCounts();
+    leftEncoder.ResetCounts();
+
+    // Set motors to desired percent
+    int rightPercent = actualPercent * -1 * RIGHT_FACTOR;
+    int leftPercent = actualPercent * LEFT_FACTOR;
+
+    runPID(counts, rightMotor, leftMotor, rightEncoder, leftEncoder, rightPercent, leftPercent);
+}
+
+void turnRightPID(int percent, int degrees)
+{
+    // Convert degrees to counts
+    int counts = DEGREES_TO_COUNTS(degrees);
+    int actualPercent = ACTUAL_PERCENTAGE_POWER(percent);
+
+    // Reset counts
+    rightEncoder.ResetCounts();
+    leftEncoder.ResetCounts();
+
+    // Set motors to desired percent
+    int rightPercent = actualPercent * RIGHT_FACTOR;
+    int leftPercent = actualPercent * -1 * LEFT_FACTOR;
+
+    runPID(counts, rightMotor, leftMotor, rightEncoder, leftEncoder, rightPercent, leftPercent);
+}
+
 // Touch GUI for manually controlling motors. It exits after a command is given, so wrap it in a while (true) to keep doing it
 void motorControlGUI()
 {
@@ -408,10 +452,10 @@ void motorControlGUI()
     // Determine which region was touched
     if (x < XMAX / 2 && y < YMAX / 2) { // Left
         int deg = getValueTouch("Set degrees to turn left", 0, 360, 5, 90);
-        turnLeft(motorPower, deg);
+        turnLeftPID(motorPower, deg);
     } else if (x >= XMAX / 2 && y < YMAX / 2) { // Right
         int deg = getValueTouch("Set degrees to turn right", 0, 360, 5, 90);
-        turnRight(motorPower, deg);
+        turnRightPID(motorPower, deg);
     } else if (x < XMAX / 2 && y >= YMAX / 2) { // Forward
         int inches = getValueTouch("Set inches to go forward", -60, 60, 1, 6);
 
@@ -419,7 +463,7 @@ void motorControlGUI()
             inches *= -1;
             motorPower *= -1;
         }
-        goForward(motorPower, inches);
+        goForwardPID(motorPower, inches);
     } else if (x >= XMAX / 2 && y >= YMAX / 2) { // Servos
         if (y < YMAX * 0.75) { // Lever arm
             int angle = getValueTouch("Set servo angle", 0, 180, 5, 90);
@@ -436,14 +480,15 @@ void motorControlGUI()
 }
 
 // Goes backwards for seconds and then goes forward the same number of counts it just went backwards
-void goBackwardsAndReturn(int percent, float seconds) {
+void goBackwardsAndReturn(int percent, float seconds)
+{
     rightEncoder.ResetCounts();
     leftEncoder.ResetCounts();
 
     int actualPercent = ACTUAL_PERCENTAGE_POWER(percent);
 
-    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent * -1 * RIGHT_FACTOR);
-    leftMotor.SetPercent(MOTOR_FACTOR * actualPercent * -1 + LEFT_MODIFIER);
+    rightMotor.SetPercent(actualPercent * -1 * RIGHT_FACTOR);
+    leftMotor.SetPercent(actualPercent * -1);
     Sleep(1.0);
     int countsForReturn = (leftEncoder.Counts() + rightEncoder.Counts()) / 2.0;
 
@@ -453,8 +498,8 @@ void goBackwardsAndReturn(int percent, float seconds) {
 
     rightEncoder.ResetCounts();
     leftEncoder.ResetCounts();
-    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent * RIGHT_FACTOR);
-    leftMotor.SetPercent(MOTOR_FACTOR * actualPercent + LEFT_MODIFIER);
+    rightMotor.SetPercent(actualPercent * RIGHT_FACTOR);
+    leftMotor.SetPercent(actualPercent);
     while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < countsForReturn) {
         Sleep(0);
     }
@@ -465,14 +510,15 @@ void goBackwardsAndReturn(int percent, float seconds) {
 }
 
 // Currently unused alternative that uses a bump switch instead of time
-void goBackwardsUntilBumpAndReturn(int percent) {
+void goBackwardsUntilBumpAndReturn(int percent)
+{
     rightEncoder.ResetCounts();
     leftEncoder.ResetCounts();
 
     int actualPercent = ACTUAL_PERCENTAGE_POWER(percent);
 
-    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent * -1);
-    leftMotor.SetPercent(MOTOR_FACTOR * actualPercent * -1 + LEFT_MODIFIER);
+    rightMotor.SetPercent(actualPercent * -1);
+    leftMotor.SetPercent(actualPercent * -1);
     while (bumpSwitch.Value() == NOT_ENGAGED) {
         Sleep(0);
     }
@@ -485,8 +531,8 @@ void goBackwardsUntilBumpAndReturn(int percent) {
 
     rightEncoder.ResetCounts();
     leftEncoder.ResetCounts();
-    rightMotor.SetPercent(MOTOR_FACTOR * actualPercent);
-    leftMotor.SetPercent(MOTOR_FACTOR * actualPercent + LEFT_MODIFIER);
+    rightMotor.SetPercent(actualPercent);
+    leftMotor.SetPercent(actualPercent);
     while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < countsForReturn) {
         Sleep(0);
     }
@@ -508,27 +554,23 @@ void goForward(int percent, float inches, float downtime, float timeout)
     leftEncoder.ResetCounts();
 
     // Set motors to desired percent
-    int rightPercent = MOTOR_FACTOR * actualPercent * RIGHT_FACTOR;
-    int leftPercent = MOTOR_FACTOR * actualPercent + LEFT_MODIFIER;
+    int rightPercent = actualPercent * RIGHT_FACTOR;
+    int leftPercent = LEFT_FACTOR * actualPercent;
     rightMotor.SetPercent(rightPercent);
     leftMotor.SetPercent(leftPercent);
 
     float startTime = TimeNow();
 
-    // // Run motors until avg of left and right encoder equals counts
-    // while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < counts && 
-    //        TimeNow() - startTime < timeout) {
-    //     // For some reason empty while loops don't work on arduino. This is a workaround
-    //     // writeDebugMotor();
-    //     Sleep(0);
-    // }
-
-    runPID(counts, rightMotor, leftMotor, rightEncoder, leftEncoder, rightPercent, leftPercent);
+    // Run motors until avg of left and right encoder equals counts
+    while ((leftEncoder.Counts() + rightEncoder.Counts()) / 2.0 < counts &&
+           TimeNow() - startTime < timeout) {
+        // For some reason empty while loops don't work on arduino. This is a workaround
+        // writeDebugMotor();
+        Sleep(0);
+    }
 
     // Turn off motors
     rightMotor.Stop();
     leftMotor.Stop();
     Sleep(downtime);
-
-    
 }
