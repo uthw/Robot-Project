@@ -3,7 +3,7 @@
 #include <FEH.h>
 #include <FEHUtility.h>
 
-#define DARK_THRESHOLD 2.0 // Brightest light level (lowest voltage) that is considered dark
+#define DARK_THRESHOLD 1.5 // Brightest light level (lowest voltage) that is considered dark
 #define DARK_TOLERANCE 0.0 // Not needed
 #define IS_DARK(voltage) (voltage >= DARK_THRESHOLD - DARK_TOLERANCE)
 
@@ -116,12 +116,12 @@ void humidifier_button(int speed)
     goForwardTimed(30, 1);
 
     if (wasRed) {
-        turnRight(25, 3);
+        turnRight(25, 5);
         // turnLeft(25, 10);
         Sleep(0);
     } else {
         goBackward(speed, 2);
-        turnRight(25, 26);
+        turnRight(25, 25);
     }
 }
 
@@ -197,6 +197,35 @@ void compostBin(int speed)
     turnComposter(-100, 3); // Turn composter back
 }
 
+void appleBasketM4(int speed) {
+    // Navigate to the stump
+    goBackward(speed, 3);
+    turnRight(speed, 102);
+    goBackward(speed, 10);
+    goForward(speed, 21.25);
+    turnLeft(speed, 85); // Now facing the stump
+
+    setLeverArmDegree(120);
+
+    goForward(speed, 10, MOTOR_DOWNTIME, 5.0);
+    // waitForTouch("Touch to pick up apples");
+    setLeverArmDegree(90);
+
+    goBackward(speed, 3);
+    turnRight(speed, 20);
+    goBackward(speed, 27);
+    goForward(25, 4);
+    turnRight(25, 93);
+    goForward(35, 26);
+    turnLeft(25, 45);
+    goForward(25, 9.25); // Going Diagonal
+    turnRight(25, 46);
+    goForward(25, 15.5, 0.2, 4.0);
+    // drop bucket off
+    setLeverArmDegree(120);
+    Sleep(0.2);
+}
+
 // Travels from compost bin to apple basket and carries the basket to the depot to drop it
 void appleBasket(int speed)
 {
@@ -251,19 +280,27 @@ void leverA(int speed)
 
 void leverAAlt(int speed)
 {
-    goForward(speed, 9.5); // Goes across blue lines on ground
-    turnRight(speed, 95); // Facing lever (up from 92)
+    goForward(speed, 9.25); // Goes across blue lines on ground
+    turnRight(speed, 92); // Facing lever (up from 92)
     waitForTouch("touch to pull lever");
     goForward(speed, 6.5);
     setLeverArmDegreeInstant(160); // Lower the lever
     Sleep(1.0);
+    // if (RCS.isLeverFlipped() != 0) { // Try again if failed
+    //     goBackward(speed, 4);
+    //     setLeverArmDegree(90); // Raise
+    //     turnRight(speed, 5);
+    //     goForward(speed, 6.5);
+    //     setLeverArmDegreeInstant(160); // Lower the leer
+    //     Sleep(1.0);
+    // }
     goBackward(speed, 4);
     setLeverArmDegree(170);
     Sleep(5.0); // Wait 5 seconds for extra points
     goForward(speed, 4.5);
     setLeverArmDegreeInstant(110); // Raise lever back up
     Sleep(1.0);
-    goBackward(speed, 9);
+    goBackward(speed, 8.5);
     turnLeft(speed, 45);
     goForward(speed, 2);
 }
@@ -429,9 +466,85 @@ void taskGUI()
         compostBin(spd);
     } else if (x >= XMAX / 2 && y >= YMAX / 2) { // Apple
         waitForTouch("Touch for apple basket");
-        appleBasket(spd);
+        appleBasketM4(spd);
     } else if (y >= YMAX * 0.75) { // Window
         waitForTouch("Touch for window");
         window(spd);
+    }
+}
+
+void run() {
+    int speed = 35;
+
+    RCS.InitializeTouchMenu("0410H5NPE"); // Uncomment for official runs (RCS)
+    detectStartDebug();
+
+    // start button
+    goBackward(25, 2);
+    Sleep(0.5);
+    goForward(25, 1.5);
+
+    // goBackwardsAndReturn(25, 0.3);
+
+    compostBin(speed);
+    appleBasketM4(speed);
+
+    waitForTouch("touch for levers");
+
+    levers(speed); // RCS-dependent lever code
+
+    waitForTouch("touch for humidifier");
+
+    humidifier_button(speed); // this one also does window and final button
+
+    window(speed); // RCS Independent
+
+    // LCD.Clear();
+    // LCD.WriteLine("touch for window");
+    // LCD.WaitForTouchToStart();
+    // Sleep(TOUCH_BUFFER);
+    // window(speed);
+}
+
+// Asks user what they want to do (run, motor control, task control)
+// Main menu interface that lets users choose between running a competition sequence,
+// accessing motor controls, or running individual tasks
+void mainMenuGUI()
+{
+    while (true) {
+        LCD.Clear();
+        LCD.SetFontColor(WHITE);
+        LCD.WriteLine("What should I do?");
+        LCD.WriteAt("Off. Run", XMAX / 4 - 40, YMAX / 3); // top left region
+        LCD.WriteAt("Motor", XMAX * 3 / 4 - 30, YMAX / 3); // top right region
+        LCD.WriteAt("Task", XMAX / 2 - 20, YMAX * 2 / 3); // bottom region
+
+        int x, y;
+
+        // Draw dividing lines
+        LCD.DrawVerticalLine(XMAX / 2, 20, YMAX * 2 / 3); // vertical divider in top half
+        LCD.DrawHorizontalLine(YMAX * 2 / 3, 0, XMAX); // horizontal divider
+
+        // Wait for touch
+        LCD.WaitForTouchToStart();
+        while (!LCD.Touch(&x, &y)) {
+            Sleep(0.1);
+        }
+        Sleep(TOUCH_BUFFER);
+
+        // Determine which region was touched
+        if (y < YMAX * 2 / 3) {
+            if (x < XMAX / 2) {
+                // Run Course selected
+                LCD.Clear();
+                run();
+            } else {
+                // Motor Control selected
+                motorControlGUI();
+            }
+        } else {
+            // Task Test selected
+            taskGUI();
+        }
     }
 }

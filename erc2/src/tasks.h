@@ -9,8 +9,10 @@ void calibrateLightSensor();
 void compostBin(int speed);
 void levers(int speed);
 void appleBasket(int speed);
+void appleBasketM4(int speed);
 void window(int speed);
 void windowBonus(int speed);
 void taskGUI();
+void mainMenuGUI();
 
 #endif

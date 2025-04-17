@@ -35,6 +35,7 @@ AnalogInputPin middleOpto(FEHIO::Pin0); // Middle optosensor
 
 #define LEFT_FACTOR 1 // Applied to left motor
 #define RIGHT_FACTOR -1 // Applied to right motor
+#define TURN_FACTOR 0.75
 
 #define MOTOR_DOWNTIME 0.2 // Time in seconds motors stop after a drivetrain method is called
 #define SERVO_ADJUSTMENT_INTERVAL 0.005 // Time in seconds between servo movements
@@ -83,8 +84,8 @@ void turnRight(int percent, int degrees)
     leftEncoder.ResetCounts();
 
     // Set motors to desired percent
-    int rightPercent = actualPercent * -1 * RIGHT_FACTOR;
-    int leftPercent = actualPercent * LEFT_FACTOR;
+    int rightPercent = actualPercent * -1 * RIGHT_FACTOR * TURN_FACTOR;
+    int leftPercent = actualPercent * LEFT_FACTOR * TURN_FACTOR;
     rightMotor.SetPercent(rightPercent);
     leftMotor.SetPercent(leftPercent);
 
@@ -116,8 +117,8 @@ void turnLeft(int percent, int degrees)
     leftEncoder.ResetCounts();
 
     // Set motors to desired percent
-    int rightPercent = actualPercent * RIGHT_FACTOR;
-    int leftPercent = actualPercent * -1 * LEFT_FACTOR;
+    int rightPercent = actualPercent * RIGHT_FACTOR * TURN_FACTOR;
+    int leftPercent = actualPercent * -1 * LEFT_FACTOR * TURN_FACTOR;
     rightMotor.SetPercent(rightPercent);
     leftMotor.SetPercent(leftPercent);
 
@@ -402,7 +403,7 @@ void turnLeftPID(int percent, int degrees)
 
 void turnRightPID(int percent, int degrees)
 {
-    float scale = 1.00;
+    float scale = 1.1;
     // Convert degrees to counts
     int counts = DEGREES_TO_COUNTS(degrees * scale);
     int actualPercent = ACTUAL_PERCENTAGE_POWER(percent);
@@ -448,7 +449,7 @@ void motorControlGUI()
         Sleep(0.1);
     }
 
-    int motorPower = 15;
+    int motorPower = 35;
 
     // Determine which region was touched
     if (x < XMAX / 2 && y < YMAX / 2) { // Left
@@ -464,7 +465,7 @@ void motorControlGUI()
             inches *= -1;
             motorPower *= -1;
         }
-        goForwardPID(motorPower, inches);
+        goForward(motorPower, inches);
     } else if (x >= XMAX / 2 && y >= YMAX / 2) { // Servos
         if (y < YMAX * 0.75) { // Lever arm
             int angle = getValueTouch("Set servo angle", 0, 180, 5, 90);
@@ -575,3 +576,4 @@ void goForward(int percent, float inches, float downtime, float timeout)
     leftMotor.Stop();
     Sleep(downtime);
 }
+
