@@ -50,7 +50,9 @@ void detectStart()
 // Motors go forward at percent power until light sensor detects light
 void goForwardUntilLight(int percent)
 {
-    goForward(percent);
+    if (IS_DARK(lightSensor.Value())) {
+        goForward(percent);
+    }
 
     float startTime = TimeNow();
 
@@ -70,6 +72,7 @@ void printLightSensorValue() {
 // Caution: will need to update inches since this was written while motor speed depended on battery
 void humidifier_button(int speed)
 {
+    setLeverArmDegree(50); // So the arm doesn't affect pressing the button
     // Go to button light and read
     goForwardUntilLight(speed);
     goForward(speed, 0.5); // experimental correction
@@ -84,14 +87,12 @@ void humidifier_button(int speed)
 
         LCD.WriteLine("RED");
         printLightSensorValue();
-        waitForTouch("Touch to continue");
     } else if (IS_BLUE(lightSensor.Value())) {
         turnLeft(22, 10);
         LCD.Clear();
 
         LCD.WriteLine("BLUE");
         printLightSensorValue();
-        waitForTouch("Touch to continue");
     } else {
         // Just do a random one
         if (rand() % 2 == 0) {
@@ -101,18 +102,15 @@ void humidifier_button(int speed)
 
             LCD.WriteLine("Random (red)");
             printLightSensorValue();
-            waitForTouch("Touch to continue");
         } else {
             turnLeft(22, 10);
             LCD.Clear();
 
             LCD.WriteLine("Random (blue)");
             printLightSensorValue();
-            waitForTouch("Touch to continue");
         }
     }
 
-    setLeverArmDegree(50); //
     goForwardTimed(30, 1);
 
     if (wasRed) {
@@ -189,13 +187,14 @@ void compostBin(int speed)
     setLeverArmDegree(50);
     // goForward(speed, 2);
     turnLeft(speed, 45);
-    goForward(speed, 7);
-    turnLeft(speed, 4);
+    goForward(speed, 6);
+    // turnLeft(speed, 4);
     goForward(speed, 2.85);
-    waitForTouch("touch to turn composter");
-    turnComposter(100, 3); // Turn composter
-    turnComposter(-100, 3); // Turn composter back
+    // waitForTouch("touch to turn composter");
+    turnComposter(100, 2); // Turn composter
+    turnComposter(-100, 2); // Turn composter back
 }
+
 
 void appleBasketM4(int speed) {
     // Navigate to the stump
@@ -207,7 +206,7 @@ void appleBasketM4(int speed) {
 
     setLeverArmDegree(120);
 
-    goForward(speed, 10, MOTOR_DOWNTIME, 5.0);
+    goForward(speed, 10, MOTOR_DOWNTIME, 3.0);
     // waitForTouch("Touch to pick up apples");
     setLeverArmDegree(90);
 
@@ -215,14 +214,14 @@ void appleBasketM4(int speed) {
     turnRight(speed, 20);
     goBackward(speed, 27);
     goForward(25, 4);
-    turnRight(25, 93);
-    goForward(35, 26);
-    turnLeft(25, 45);
-    goForward(25, 9.25); // Going Diagonal
-    turnRight(25, 46);
+    turnRight(35, 90);
+    goForward(35, 28);
+    turnLeft(25, 46);
+    goForward(25, 7.5); // Going Diagonal
+    turnRight(25, 50);
     goForward(25, 15.5, 0.2, 4.0);
     // drop bucket off
-    setLeverArmDegree(120);
+    setLeverArmDegree(130);
     Sleep(0.2);
 }
 
@@ -239,7 +238,7 @@ void appleBasket(int speed)
     setLeverArmDegree(120); // Forward
 
     goForward(speed, 10, MOTOR_DOWNTIME, 5.0);
-    waitForTouch("touch to pick up apples");
+    // waitForTouch("touch to pick up apples");
     setLeverArmDegree(65); // Pick up apples
 
     goBackward(speed, 3);
@@ -280,9 +279,9 @@ void leverA(int speed)
 
 void leverAAlt(int speed)
 {
-    goForward(speed, 9.25); // Goes across blue lines on ground
+    goForward(speed, 9.0); // Goes across blue lines on ground
     turnRight(speed, 92); // Facing lever (up from 92)
-    waitForTouch("touch to pull lever");
+    // waitForTouch("touch to pull lever");
     goForward(speed, 6.5);
     setLeverArmDegreeInstant(160); // Lower the lever
     Sleep(1.0);
@@ -302,8 +301,9 @@ void leverAAlt(int speed)
     Sleep(1.0);
     goBackward(speed, 8.5);
     turnLeft(speed, 45);
-    goForward(speed, 2);
+    goForward(speed, 1);
 }
+
 
 void leverRCS(int speed)
 {
@@ -372,6 +372,7 @@ void levers(int speed)
     leverAAlt(speed);
 }
 
+
 // Travels from button to window to open and close it
 void windowBonus(int speed)
 {
@@ -427,6 +428,7 @@ void window(int speed) {
     turnRight(speed, 90); // Turn towards ending button
     goBackward(speed, 45); // Finish
 }
+
 
 // Like motorControlGUI but for tasks
 void taskGUI()
@@ -489,11 +491,11 @@ void run() {
     compostBin(speed);
     appleBasketM4(speed);
 
-    waitForTouch("touch for levers");
+    // waitForTouch("touch for levers");
 
     levers(speed); // RCS-dependent lever code
 
-    waitForTouch("touch for humidifier");
+    // waitForTouch("touch for humidifier");
 
     humidifier_button(speed); // this one also does window and final button
 
@@ -517,12 +519,13 @@ void mainMenuGUI()
         LCD.WriteLine("What should I do?");
         LCD.WriteAt("Off. Run", XMAX / 4 - 40, YMAX / 3); // top left region
         LCD.WriteAt("Motor", XMAX * 3 / 4 - 30, YMAX / 3); // top right region
-        LCD.WriteAt("Task", XMAX / 2 - 20, YMAX * 2 / 3); // bottom region
+        LCD.WriteAt("Task", XMAX / 4 - 20, YMAX * 2 / 3 + 20); // bottom left region
+        LCD.WriteAt("Calibrate", XMAX * 3 / 4 - 30, YMAX * 2 / 3 + 20); // bottom right region
 
         int x, y;
 
         // Draw dividing lines
-        LCD.DrawVerticalLine(XMAX / 2, 20, YMAX * 2 / 3); // vertical divider in top half
+        LCD.DrawVerticalLine(XMAX / 2, 20, YMAX); // vertical divider all the way down
         LCD.DrawHorizontalLine(YMAX * 2 / 3, 0, XMAX); // horizontal divider
 
         // Wait for touch
@@ -543,8 +546,16 @@ void mainMenuGUI()
                 motorControlGUI();
             }
         } else {
-            // Task Test selected
-            taskGUI();
+            if (x < XMAX / 2) {
+                // Task Test selected
+                taskGUI();
+            } else {
+                // Calibrate Light Sensor
+                LCD.Clear();
+                LCD.WriteLine("Starting light sensor calibration");
+                Sleep(0.5);
+                calibrateLightSensor();
+            }
         }
     }
 }

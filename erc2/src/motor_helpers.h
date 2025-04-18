@@ -30,5 +30,8 @@ void writeDebugMotor();
 void goBackwardsAndReturn(int percent, float seconds);
 void goBackwardsUntilBumpAndReturn(int percent);
 void goForward(int percent, float inches, float downtime, float timeout);
+void goForwardPID(int percent, float inches);
+void turnLeftPID(int percent, int degrees);
+void turnRightPID(int percent, int degrees);
 
 #endif
